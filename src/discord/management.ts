@@ -6,6 +6,19 @@ import { Guild, Role } from 'discord.js';
 const MANAGEMENT_ROLE_NAME = 'Sansha\'s Helper';
 
 /**
+ * Checks if a role with the given name exists in the guild
+ * @param guild - The Discord guild to check
+ * @param roleName - The name of the role to search for
+ * @returns Promise that resolves to the role if found, undefined otherwise
+ */
+const findRoleByName = async (guild: Guild, roleName: string): Promise<Role | undefined> => {
+  // Ensure the guild's roles are fully loaded
+  await guild.roles.fetch();
+  
+  return guild.roles.cache.find(role => role.name === roleName);
+};
+
+/**
  * Checks if the bot's management role exists, creates it if not
  * This role must be positioned above all roles that the bot will manage
  * @param guild - The Discord guild to check/create the role in
@@ -14,7 +27,7 @@ const MANAGEMENT_ROLE_NAME = 'Sansha\'s Helper';
 export const checkManagementRole = async (guild: Guild): Promise<Role> => {
   try {
     // Check if the management role already exists
-    const existingRole = guild.roles.cache.find(role => role.name === MANAGEMENT_ROLE_NAME);
+    const existingRole = await findRoleByName(guild, MANAGEMENT_ROLE_NAME);
     
     if (existingRole !== undefined) {
       console.log(`Management role "${MANAGEMENT_ROLE_NAME}" already exists in guild: ${guild.name}`);
