@@ -1,0 +1,40 @@
+{
+  "name": "sanshas-helper",
+  "version": "0.0.1",
+  "description": "Discord bot focused on EVE Frontier",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc && node dist/index.js",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tsal/sanshas-helper.git"
+  },
+  "keywords": [
+    "eve",
+    "frontier",
+    "role",
+    "management"
+  ],
+  "author": "tsal",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tsal/sanshas-helper/issues"
+  },
+  "homepage": "https://github.com/tsal/sanshas-helper#readme",
+  "dependencies": {
+    "discord.js": "^14.21.0",
+    "dotenv": "^17.2.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3",
+    "@types/node": "^24.0.13",
+    "jest": "^30.0.4",
+    "@types/jest": "^30.0.0",
+    "ts-jest": "^29.4.0"
+  }
+}
