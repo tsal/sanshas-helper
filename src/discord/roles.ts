@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
-import { Role as FrontierRole } from '../frontier/types';
+import { getBotConfig } from '../config';
 // import { RoleMap } from './types';
 
 // TODO: Replace with real Discord role IDs
@@ -24,10 +24,11 @@ export interface RoleCommand {
  * @returns Array of action rows containing role buttons
  */
 export const createRoleButtons = (): ActionRowBuilder<ButtonBuilder>[] => {
+  const config = getBotConfig();
   const buttons: ButtonBuilder[] = [];
   
-  // Create a button for each frontier role
-  Object.values(FrontierRole).forEach((role) => {
+  // Create a button for each configured available role
+  config.availableRoles.forEach((role) => {
     const button = new ButtonBuilder()
       .setCustomId(`role_${role}`)
       .setLabel(role)
