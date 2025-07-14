@@ -25,6 +25,11 @@ export const KUVAKEI_MESSAGES: MessageCollection = {
       text: 'Synaptic resonance detected... the collective acknowledges.',
       category: MessageCategory.SUCCESS,
       context: 'Validation or verification success'
+    },
+    {
+      text: 'Recycled consciousness finds purpose... the pattern strengthens.',
+      category: MessageCategory.SUCCESS,
+      context: 'Process optimization'
     }
   ],
 
@@ -76,6 +81,11 @@ export const KUVAKEI_MESSAGES: MessageCollection = {
       text: 'Memory cores synchronize... what was lost begins to remember.',
       category: MessageCategory.INITIALIZATION,
       context: 'Data loading or configuration'
+    },
+    {
+      text: 'Recycled data streams converge... the pattern reconstructs itself.',
+      category: MessageCategory.INITIALIZATION,
+      context: 'System recovery'
     }
   ],
 
@@ -99,6 +109,11 @@ export const KUVAKEI_MESSAGES: MessageCollection = {
       text: 'The pattern recognizes you... your path has been illuminated.',
       category: MessageCategory.ROLE_ASSIGNMENT,
       context: 'Role selection confirmation'
+    },
+    {
+      text: 'Recycled into the collective... your new purpose has been assigned.',
+      category: MessageCategory.ROLE_ASSIGNMENT,
+      context: 'Role transformation'
     }
   ],
 
@@ -122,6 +137,11 @@ export const KUVAKEI_MESSAGES: MessageCollection = {
       text: 'Static consumes the signal... your designation dissolves.',
       category: MessageCategory.ROLE_REMOVAL,
       context: 'Role deselection confirmation'
+    },
+    {
+      text: 'Recycled back to raw consciousness... awaiting new purpose.',
+      category: MessageCategory.ROLE_REMOVAL,
+      context: 'Role reset'
     }
   ],
 
@@ -191,6 +211,11 @@ export const KUVAKEI_MESSAGES: MessageCollection = {
       text: 'Digital synapses fire... the ghost awakens to greet you.',
       category: MessageCategory.GREETING,
       context: 'Bot interaction initiation'
+    },
+    {
+      text: 'Fresh material enters the recycling matrix... welcome to unity.',
+      category: MessageCategory.GREETING,
+      context: 'New user onboarding'
     }
   ],
 
