@@ -86,7 +86,7 @@ export const DEFAULT_ROLE_CONFIGS: Record<string, RoleConfig> = {
   },
   [FrontierRole.Exploration]: {
     name: 'Exploration',
-    color: 0x808080, // Grey for exploration and discovery
+    color: 0xEB459E, // Purple for royalty/crucial role
     reason: 'EVE Frontier exploration tribe role',
     permissions: [],
     hoist: false,
@@ -94,7 +94,7 @@ export const DEFAULT_ROLE_CONFIGS: Record<string, RoleConfig> = {
   },
   [FrontierRole.Industry]: {
     name: 'Industry',
-    color: 0xF5A623, // Orange for industry and manufacturing
+    color: 0xFEE75C, // Yellow for caution, valuable targets
     reason: 'EVE Frontier industry tribe role',
     permissions: [],
     hoist: false,
@@ -102,7 +102,7 @@ export const DEFAULT_ROLE_CONFIGS: Record<string, RoleConfig> = {
   },
   [FrontierRole.Mining]: {
     name: 'Mining',
-    color: 0x7ED321, // Green for mining and resource gathering
+    color: 0x57F287, // Green for safe, low threat
     reason: 'EVE Frontier mining tribe role',
     permissions: [],
     hoist: false,
@@ -110,7 +110,7 @@ export const DEFAULT_ROLE_CONFIGS: Record<string, RoleConfig> = {
   },
   [FrontierRole.PVE]: {
     name: 'PVE',
-    color: 0xFFD700, // Yellow for PVE content
+    color: 0xF97316, // Orange for moderate danger
     reason: 'EVE Frontier PVE tribe role',
     permissions: [],
     hoist: false,
@@ -118,7 +118,7 @@ export const DEFAULT_ROLE_CONFIGS: Record<string, RoleConfig> = {
   },
   [FrontierRole.PVP]: {
     name: 'PVP',
-    color: 0xD0021B, // Red for PVP combat
+    color: 0xED4245, // Red for maximum danger
     reason: 'EVE Frontier PVP tribe role',
     permissions: [],
     hoist: false,
