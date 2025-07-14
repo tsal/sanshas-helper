@@ -2,16 +2,6 @@ import { SlashCommandBuilder, ChatInputCommandInteraction, ActionRowBuilder, But
 import { getBotConfig } from '../config';
 import { findRoleByName } from './management';
 import { getRandomMessage, MessageCategory } from '../kuvakei';
-// import { RoleMap } from './types';
-
-// TODO: Replace with real Discord role IDs
-// const ROLE_MAP: RoleMap = {
-//   [FrontierRole.Exploration]: '123456789012345678',
-//   [FrontierRole.Industry]: '234567890123456789',
-//   [FrontierRole.Mining]: '345678901234567890',
-//   [FrontierRole.PVE]: '456789012345678901',
-//   [FrontierRole.PVP]: '567890123456789012'
-// };
 
 /**
  * Role selection command interface
