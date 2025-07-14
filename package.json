@@ -21,7 +21,7 @@
     "management"
   ],
   "author": "tsal",
-  "license": "ISC",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/tsal/sanshas-helper/issues"
   },
