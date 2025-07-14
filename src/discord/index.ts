@@ -5,4 +5,4 @@
 
 export { RoleMap } from './types';
 export { roleCommand, RoleCommand, createRoleButtons } from './roles';
-export { checkManagementRole } from './management';
+export { checkManagementRole, ensureAllRoles } from './management';

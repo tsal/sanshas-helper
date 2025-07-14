@@ -1,6 +1,6 @@
 import { Client, GatewayIntentBits } from 'discord.js';
 import * as dotenv from 'dotenv';
-import { checkManagementRole } from './discord';
+import { ensureAllRoles } from './discord';
 
 // Load environment variables
 dotenv.config();
@@ -32,16 +32,16 @@ client.once('ready', async (): Promise<void> => {
   console.log(`Serving ${client.guilds.cache.size} guilds`);
   
   // Check management roles in all existing guilds
-  console.log('Checking management roles in existing guilds...');
+  console.log('Setting up roles in existing guilds...');
   for (const guild of client.guilds.cache.values()) {
     try {
-      await checkManagementRole(guild);
-      console.log(`Management role verified in guild: ${guild.name}`);
+      const roles = await ensureAllRoles(guild);
+      console.log(`Successfully ensured ${roles.length} roles exist in guild: ${guild.name}`);
     } catch (error) {
-      console.error(`Failed to verify management role in guild ${guild.name}:`, error);
+      console.error(`Failed to ensure roles in guild ${guild.name}:`, error);
     }
   }
-  console.log('Management role check complete.');
+  console.log('Role setup complete.');
 });
 
 /**
@@ -60,10 +60,10 @@ client.on('guildCreate', async (guild): Promise<void> => {
   console.log(`Joined new guild: ${guild.name} (ID: ${guild.id})`);
   
   try {
-    await checkManagementRole(guild);
-    console.log(`Successfully set up management role in guild: ${guild.name}`);
+    const roles = await ensureAllRoles(guild);
+    console.log(`Successfully set up ${roles.length} roles in guild: ${guild.name}`);
   } catch (error) {
-    console.error(`Failed to set up management role in guild ${guild.name}:`, error);
+    console.error(`Failed to set up roles in guild ${guild.name}:`, error);
   }
 });
 

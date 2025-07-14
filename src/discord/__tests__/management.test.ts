@@ -127,9 +127,16 @@ describe('Discord Management', () => {
   });
 
   describe('checkManagementRole', () => {
-    it('should return existing management role', async () => {
+    it('should return existing management role with detailed logging', async () => {
       // Setup
-      const managementRole = { ...mockRole, name: 'Sansha\'s Helper' };
+      const managementRole = { 
+        ...mockRole, 
+        name: 'Sansha\'s Helper',
+        id: 'mgmt123',
+        position: 5,
+        color: 0x8B0000,
+        permissions: { bitfield: BigInt(8) }
+      };
       mockRoleCollection.set('mgmt123', managementRole);
       mockRoleManager.fetch.mockResolvedValue(mockRoleCollection);
 
@@ -141,50 +148,31 @@ describe('Discord Management', () => {
       expect(mockRoleManager.create).not.toHaveBeenCalled();
     });
 
-    it('should create management role when it does not exist', async () => {
+    it('should throw error when management role does not exist', async () => {
       // Setup
       mockRoleManager.fetch.mockResolvedValue(mockRoleCollection);
-      mockRoleManager.create.mockResolvedValue(mockRole);
-
-      // Execute
-      const result = await checkManagementRole(mockGuild);
-
-      // Assert
-      expect(mockRoleManager.create).toHaveBeenCalledWith({
-        name: 'Sansha\'s Helper',
-        color: 0x8B0000,
-        reason: 'Bot management role for role assignment functionality',
-        permissions: [],
-        hoist: false,
-        mentionable: false
-      });
-      expect(result).toBe(mockRole);
-    });
-
-    it('should create management role using default config instead of inline config', async () => {
-      // This test ensures we can refactor to use DEFAULT_ROLE_CONFIGS later
-      // Setup
-      mockRoleManager.fetch.mockResolvedValue(mockRoleCollection);
-      mockRoleManager.create.mockResolvedValue(mockRole);
-
-      // Execute
-      const result = await checkManagementRole(mockGuild);
-
-      // Assert
-      expect(mockRoleManager.create).toHaveBeenCalledTimes(1);
-      const createCall = mockRoleManager.create.mock.calls[0][0];
-      expect(createCall.name).toBe('Sansha\'s Helper');
-      expect(createCall.color).toBe(0x8B0000);
-      expect(result).toBe(mockRole);
-    });
-
-    it('should handle management role creation failure', async () => {
-      // Setup
-      mockRoleManager.fetch.mockResolvedValue(mockRoleCollection);
-      mockRoleManager.create.mockRejectedValue(new Error('Creation failed'));
 
       // Execute & Assert
-      await expect(checkManagementRole(mockGuild)).rejects.toThrow('Management role setup failed: Role creation failed: Creation failed');
+      await expect(checkManagementRole(mockGuild)).rejects.toThrow(
+        'Management role "Sansha\'s Helper" not found. Bot may not have been properly invited with required permissions.'
+      );
+      expect(mockRoleManager.create).not.toHaveBeenCalled();
+    });
+
+    it('should handle fetch errors during role check', async () => {
+      // Setup
+      mockRoleManager.fetch.mockRejectedValue(new Error('Fetch failed'));
+
+      // Execute & Assert
+      await expect(checkManagementRole(mockGuild)).rejects.toThrow('Management role check failed: Fetch failed');
+    });
+
+    it('should handle unknown errors gracefully', async () => {
+      // Setup
+      mockRoleManager.fetch.mockRejectedValue('Unknown error');
+
+      // Execute & Assert
+      await expect(checkManagementRole(mockGuild)).rejects.toThrow('Management role check failed: Unknown error');
     });
   });
 });

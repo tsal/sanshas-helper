@@ -1,5 +1,5 @@
 import { Guild, Role } from 'discord.js';
-import { RoleConfig, createRoleOptions, DEFAULT_ROLE_CONFIGS, MANAGEMENT_ROLE } from './types';
+import { RoleConfig, createRoleOptions, DEFAULT_ROLE_CONFIGS } from './types';
 import { getBotConfig } from '../config';
 
 /**
@@ -43,35 +43,45 @@ export const createRole = async (guild: Guild, config: RoleConfig): Promise<Role
 };
 
 /**
- * Checks if the bot's management role exists, creates it if not
- * This role must be positioned above all roles that the bot will manage
- * @param guild - The Discord guild to check/create the role in
- * @returns Promise that resolves to the management role
+ * Checks if the bot's management role exists and gathers indexing information
+ * This role is automatically created by Discord when the bot is added with appropriate permissions
+ * @param guild - The Discord guild to check
+ * @returns Promise that resolves to the management role if found
+ * @throws Error if the management role is not found
  */
 export const checkManagementRole = async (guild: Guild): Promise<Role> => {
   try {
-    // Check if the management role already exists
+    // Check if the management role exists (should be auto-created by Discord)
     const existingRole = await findRoleByName(guild, MANAGEMENT_ROLE_NAME);
     
     if (existingRole !== undefined) {
-      console.log(`Management role "${MANAGEMENT_ROLE_NAME}" already exists in guild: ${guild.name}`);
+      console.log(`Management role "${MANAGEMENT_ROLE_NAME}" found in guild: ${guild.name}`);
+      console.log(`  Role ID: ${existingRole.id}`);
+      console.log(`  Role position: ${existingRole.position}`);
+      console.log(`  Role color: 0x${existingRole.color.toString(16).toUpperCase()}`);
+      console.log(`  Role permissions: ${existingRole.permissions.bitfield.toString()}`);
+      
+      // TODO: Check role hierarchy position relative to frontier roles
+      // TODO: Alert server owner if role position needs adjustment
+      
       return existingRole;
     }
     
-    // Create the management role
-    console.log(`Creating management role "${MANAGEMENT_ROLE_NAME}" in guild: ${guild.name}`);
+    // Management role not found - this indicates a setup issue
+    console.error(`Management role "${MANAGEMENT_ROLE_NAME}" not found in guild: ${guild.name}`);
+    console.error('This role should be automatically created by Discord when the bot is added with proper permissions.');
+    console.error('Please ensure the bot was invited with "Manage Roles" permission.');
     
-    const managementRoleConfig = DEFAULT_ROLE_CONFIGS[MANAGEMENT_ROLE];
-    const managementRole = await createRole(guild, managementRoleConfig);
-    
-    // TODO: Position the role appropriately in the hierarchy
-    // This might require additional logic to move it above frontier roles
-    
-    return managementRole;
+    throw new Error(`Management role "${MANAGEMENT_ROLE_NAME}" not found. Bot may not have been properly invited with required permissions.`);
     
   } catch (error) {
-    console.error(`Failed to check/create management role in guild ${guild.name}:`, error);
-    throw new Error(`Management role setup failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    if (error instanceof Error && error.message.includes('not found')) {
+      // Re-throw our custom error
+      throw error;
+    }
+    
+    console.error(`Failed to check management role in guild ${guild.name}:`, error);
+    throw new Error(`Management role check failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
 
@@ -85,9 +95,14 @@ export const ensureAllRoles = async (guild: Guild, config = getBotConfig()): Pro
   try {
     const roles: Role[] = [];
     
-    // Always ensure the management role exists first
-    const managementRole = await checkManagementRole(guild);
-    roles.push(managementRole);
+    // Always check that the management role exists first (auto-created by Discord)
+    try {
+      const managementRole = await checkManagementRole(guild);
+      roles.push(managementRole);
+    } catch (error) {
+      console.error(`Management role check failed in guild ${guild.name}, continuing with frontier roles:`, error);
+      // Continue with frontier role setup even if management role is missing
+    }
     
     // Check and create frontier roles based on configuration
     for (const frontierRole of config.availableRoles) {
@@ -115,7 +130,7 @@ export const ensureAllRoles = async (guild: Guild, config = getBotConfig()): Pro
     return roles;
     
   } catch (error) {
-    console.error(`Failed to ensure all roles in guild ${guild.name}:`, error);
+    console.error(`Failed to ensure roles in guild ${guild.name}:`, error);
     throw new Error(`Role setup failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
