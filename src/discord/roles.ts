@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, ButtonInteraction, GuildMember } from 'discord.js';
 import { getBotConfig } from '../config';
 import { findRoleByName } from './management';
+import { getRandomMessage, MessageCategory } from '../kuvakei';
 // import { RoleMap } from './types';
 
 // TODO: Replace with real Discord role IDs
@@ -123,7 +124,7 @@ export const handleRoleButtonInteraction = async (interaction: ButtonInteraction
     // For now, only handle Exploration
     if (roleName !== 'Exploration') {
       await interaction.update({
-        content: `Role "${roleName}" is not yet supported. Only Exploration role is currently available.`,
+        content: `${getRandomMessage(MessageCategory.WARNING).text} The "${roleName}" role is not yet accessible.`,
         components: []
       });
       return;
@@ -131,7 +132,7 @@ export const handleRoleButtonInteraction = async (interaction: ButtonInteraction
     
     if (!interaction.guild || !interaction.member) {
       await interaction.update({
-        content: 'This command can only be used in a server.',
+        content: getRandomMessage(MessageCategory.ERROR).text,
         components: []
       });
       return;
@@ -144,9 +145,9 @@ export const handleRoleButtonInteraction = async (interaction: ButtonInteraction
     
     let message: string;
     if (action === 'added') {
-      message = `✅ You have joined the **Exploration** role! Welcome to the frontier scouts.`;
+      message = `${getRandomMessage(MessageCategory.ROLE_ASSIGNMENT).text} You have been assigned the **${roleName}** role.`;
     } else {
-      message = `❌ You have left the **Exploration** role. Safe travels, capsuleer.`;
+      message = `${getRandomMessage(MessageCategory.ROLE_REMOVAL).text} You have been removed from the **${roleName}** role.`;
     }
     
     // Update the ephemeral message with the result
@@ -162,7 +163,7 @@ export const handleRoleButtonInteraction = async (interaction: ButtonInteraction
     
     try {
       await interaction.update({
-        content: 'An error occurred while updating your role. Please try again or contact an administrator.',
+        content: getRandomMessage(MessageCategory.ERROR).text,
         components: []
       });
     } catch (updateError) {
@@ -185,7 +186,7 @@ export const roleCommand: RoleCommand = {
       const roleButtons = createRoleButtons();
       
       await interaction.reply({
-        content: 'Select your EVE Frontier roles by clicking the buttons below:',
+        content: getRandomMessage(MessageCategory.GREETING).text,
         components: roleButtons,
         ephemeral: true
       });
@@ -196,7 +197,7 @@ export const roleCommand: RoleCommand = {
       
       if (!interaction.replied) {
         await interaction.reply({
-          content: 'An error occurred while processing your request.',
+          content: getRandomMessage(MessageCategory.ERROR).text,
           ephemeral: true
         });
       }
