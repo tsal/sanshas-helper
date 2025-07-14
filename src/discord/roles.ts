@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, ButtonInteraction, GuildMember } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, ButtonInteraction, GuildMember, MessageFlags } from 'discord.js';
 import { getBotConfig } from '../config';
 import { findRoleByName } from './management';
 import { getRandomMessage, MessageCategory } from '../kuvakei';
@@ -58,18 +58,17 @@ export const createRoleButtons = (): ActionRowBuilder<ButtonBuilder>[] => {
  */
 export const hasRole = async (member: GuildMember, roleName: string): Promise<boolean> => {
   if (!member.guild) {
-    console.log(`hasRole: Member ${member.user.tag} is not in a guild`);
+    console.error(`hasRole: Member ${member.user.tag} is not in a guild`);
     return false;
   }
   
   const role = await findRoleByName(member.guild, roleName);
   if (!role) {
-    console.log(`hasRole: Role "${roleName}" not found in guild ${member.guild.name}`);
+    console.error(`hasRole: Role "${roleName}" not found in guild ${member.guild.name}`);
     return false;
   }
   
   const hasTheRole = member.roles.cache.has(role.id);
-  console.log(`hasRole: ${member.user.tag} ${hasTheRole ? 'has' : 'does not have'} role "${roleName}" (ID: ${role.id})`);
   
   return hasTheRole;
 };
@@ -96,40 +95,102 @@ export const toggleRole = async (member: GuildMember, roleName: string): Promise
   if (hasTheRole) {
     // Remove the role
     await member.roles.remove(role, `Role removal requested by ${member.user.tag}`);
-    console.log(`Removed role "${roleName}" from ${member.user.tag}`);
     return 'removed';
   } else {
     // Add the role
     await member.roles.add(role, `Role assignment requested by ${member.user.tag}`);
-    console.log(`Added role "${roleName}" to ${member.user.tag}`);
     return 'added';
   }
 };
 
 /**
+ * Validates that the interaction is a role button interaction
+ * @param interaction - The button interaction to validate
+ * @returns The role name if valid, null if invalid
+ */
+const validateRoleInteraction = (interaction: ButtonInteraction): string | null => {
+  if (!interaction.customId.startsWith('role_')) {
+    return null;
+  }
+  
+  // Extract role from custom ID (e.g., 'role_Exploration' -> 'Exploration')
+  return interaction.customId.replace('role_', '');
+};
+
+/**
+ * Checks if the role is supported for assignment
+ * @param roleName - The name of the role to check
+ * @returns True if the role is supported
+ */
+const isRoleSupported = (roleName: string): boolean => {
+  const config = getBotConfig();
+  return config.availableRoles.includes(roleName as any);
+};
+
+/**
+ * Handles unsupported role button clicks
+ * @param interaction - The button interaction
+ * @param roleName - The name of the unsupported role
+ */
+const handleUnsupportedRole = async (interaction: ButtonInteraction, roleName: string): Promise<void> => {
+  await interaction.update({
+    content: `${getRandomMessage(MessageCategory.WARNING).text} The "${roleName}" role is not yet accessible.`,
+    components: []
+  });
+};
+
+/**
+ * Handles the role toggle operation and sends response
+ * @param interaction - The button interaction
+ * @param member - The guild member
+ * @param roleName - The name of the role to toggle
+ */
+const handleRoleToggle = async (interaction: ButtonInteraction, member: GuildMember, roleName: string): Promise<void> => {
+  const action = await toggleRole(member, roleName);
+  
+  let message: string;
+  if (action === 'added') {
+    message = `${getRandomMessage(MessageCategory.ROLE_ASSIGNMENT).text} You have been assigned the **${roleName}** role.`;
+  } else {
+    message = `${getRandomMessage(MessageCategory.ROLE_REMOVAL).text} You have been removed from the **${roleName}** role.`;
+  }
+  
+  await interaction.update({
+    content: message,
+    components: []
+  });
+  
+  // Auto-delete the message after 15 seconds
+  setTimeout(async () => {
+    try {
+      await interaction.deleteReply();
+    } catch (error) {
+      // Message might already be deleted or interaction might be invalid
+      // This is expected behavior, no need to log
+    }
+  }, 15 * 1000); // 15 seconds in milliseconds
+};
+
+/**
  * Handles button interactions for role selection
- * Currently hardcoded to handle only Exploration role
+ * Supports all configured roles and uses helper functions for clean organization
  * @param interaction - The button interaction to handle
  */
 export const handleRoleButtonInteraction = async (interaction: ButtonInteraction): Promise<void> => {
   try {
-    // For now, hardcode to only handle Exploration role
-    if (!interaction.customId.startsWith('role_')) {
+    // Validate that this is a role button interaction
+    const roleName = validateRoleInteraction(interaction);
+    if (!roleName) {
       return;
     }
     
-    // Extract role from custom ID (e.g., 'role_Exploration' -> 'Exploration')
-    const roleName = interaction.customId.replace('role_', '');
-    
-    // For now, only handle Exploration
-    if (roleName !== 'Exploration') {
-      await interaction.update({
-        content: `${getRandomMessage(MessageCategory.WARNING).text} The "${roleName}" role is not yet accessible.`,
-        components: []
-      });
+    // Check if the role is supported for assignment
+    if (!isRoleSupported(roleName)) {
+      await handleUnsupportedRole(interaction, roleName);
       return;
     }
     
+    // Validate guild and member context
     if (!interaction.guild || !interaction.member) {
       await interaction.update({
         content: getRandomMessage(MessageCategory.ERROR).text,
@@ -140,23 +201,8 @@ export const handleRoleButtonInteraction = async (interaction: ButtonInteraction
     
     const member = interaction.member as GuildMember;
     
-    // Toggle the Exploration role
-    const action = await toggleRole(member, 'Exploration');
-    
-    let message: string;
-    if (action === 'added') {
-      message = `${getRandomMessage(MessageCategory.ROLE_ASSIGNMENT).text} You have been assigned the **${roleName}** role.`;
-    } else {
-      message = `${getRandomMessage(MessageCategory.ROLE_REMOVAL).text} You have been removed from the **${roleName}** role.`;
-    }
-    
-    // Update the ephemeral message with the result
-    await interaction.update({
-      content: message,
-      components: [] // Remove the buttons since action is complete
-    });
-    
-    console.log(`Role button interaction: ${member.user.tag} ${action} Exploration role`);
+    // Handle the role toggle operation
+    await handleRoleToggle(interaction, member, roleName);
     
   } catch (error) {
     console.error('Error handling role button interaction:', error);
@@ -188,17 +234,16 @@ export const roleCommand: RoleCommand = {
       await interaction.reply({
         content: getRandomMessage(MessageCategory.GREETING).text,
         components: roleButtons,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
       
-      console.log(`Role selection command executed by ${interaction.user.tag}`);
     } catch (error) {
       console.error('Error executing role command:', error);
       
       if (!interaction.replied) {
         await interaction.reply({
           content: getRandomMessage(MessageCategory.ERROR).text,
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
     }
