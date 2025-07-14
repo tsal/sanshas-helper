@@ -22,6 +22,28 @@ export interface RoleCommand {
 }
 
 /**
+ * Gets the appropriate emoji for a role based on danger level and theme
+ * @param roleName - The name of the role
+ * @returns The emoji string for the role
+ */
+const getRoleEmoji = (roleName: string): string => {
+  switch (roleName.toLowerCase()) {
+    case 'mining':
+      return '🟢'; // Green - safe, low threat
+    case 'industry':
+      return '🟡'; // Yellow - caution, valuable targets
+    case 'exploration':
+      return '🟣'; // Purple - royalty/crucial role
+    case 'pve':
+      return '🟠'; // Orange - moderate danger
+    case 'pvp':
+      return '🔴'; // Red - maximum danger
+    default:
+      return '⚪'; // White circle for unknown roles
+  }
+};
+
+/**
  * Creates button components for role selection
  * @returns Array of action rows containing role buttons
  */
@@ -31,9 +53,10 @@ export const createRoleButtons = (): ActionRowBuilder<ButtonBuilder>[] => {
   
   // Create a button for each configured available role
   config.availableRoles.forEach((role) => {
+    const emoji = getRoleEmoji(role);
     const button = new ButtonBuilder()
       .setCustomId(`role_${role}`)
-      .setLabel(role)
+      .setLabel(`${emoji} ${role}`)
       .setStyle(ButtonStyle.Secondary);
     
     buttons.push(button);

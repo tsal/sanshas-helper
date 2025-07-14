@@ -117,7 +117,6 @@ export const ensureAllRoles = async (guild: Guild, config = getBotConfig()): Pro
       const existingRole = await findRoleByName(guild, roleConfig.name);
       
       if (existingRole) {
-        console.log(`Frontier role "${roleConfig.name}" already exists in guild: ${guild.name}`);
         roles.push(existingRole);
       } else {
         // Create the frontier role
