@@ -1,5 +1,6 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, ButtonInteraction, GuildMember } from 'discord.js';
 import { getBotConfig } from '../config';
+import { findRoleByName } from './management';
 // import { RoleMap } from './types';
 
 // TODO: Replace with real Discord role IDs
@@ -46,6 +47,123 @@ export const createRoleButtons = (): ActionRowBuilder<ButtonBuilder>[] => {
   }
   
   return rows;
+};
+
+/**
+ * Checks if a guild member has a specific role
+ * @param member - The guild member to check
+ * @param roleName - The name of the role to check for
+ * @returns Promise that resolves to true if member has the role, false otherwise
+ */
+export const hasRole = async (member: GuildMember, roleName: string): Promise<boolean> => {
+  if (!member.guild) {
+    return false;
+  }
+  
+  const role = await findRoleByName(member.guild, roleName);
+  if (!role) {
+    return false;
+  }
+  
+  return member.roles.cache.has(role.id);
+};
+
+/**
+ * Toggles a role for a guild member (adds if they don't have it, removes if they do)
+ * @param member - The guild member to toggle the role for
+ * @param roleName - The name of the role to toggle
+ * @returns Promise that resolves to 'added' or 'removed' based on the action taken
+ * @throws Error if the role doesn't exist or the operation fails
+ */
+export const toggleRole = async (member: GuildMember, roleName: string): Promise<'added' | 'removed'> => {
+  if (!member.guild) {
+    throw new Error('Member is not in a guild');
+  }
+  
+  const role = await findRoleByName(member.guild, roleName);
+  if (!role) {
+    throw new Error(`Role "${roleName}" not found in guild`);
+  }
+  
+  const hasTheRole = await hasRole(member, roleName);
+  
+  if (hasTheRole) {
+    // Remove the role
+    await member.roles.remove(role, `Role removal requested by ${member.user.tag}`);
+    console.log(`Removed role "${roleName}" from ${member.user.tag}`);
+    return 'removed';
+  } else {
+    // Add the role
+    await member.roles.add(role, `Role assignment requested by ${member.user.tag}`);
+    console.log(`Added role "${roleName}" to ${member.user.tag}`);
+    return 'added';
+  }
+};
+
+/**
+ * Handles button interactions for role selection
+ * Currently hardcoded to handle only Exploration role
+ * @param interaction - The button interaction to handle
+ */
+export const handleRoleButtonInteraction = async (interaction: ButtonInteraction): Promise<void> => {
+  try {
+    // For now, hardcode to only handle Exploration role
+    if (!interaction.customId.startsWith('role_')) {
+      return;
+    }
+    
+    // Extract role from custom ID (e.g., 'role_Exploration' -> 'Exploration')
+    const roleName = interaction.customId.replace('role_', '');
+    
+    // For now, only handle Exploration
+    if (roleName !== 'Exploration') {
+      await interaction.update({
+        content: `Role "${roleName}" is not yet supported. Only Exploration role is currently available.`,
+        components: []
+      });
+      return;
+    }
+    
+    if (!interaction.guild || !interaction.member) {
+      await interaction.update({
+        content: 'This command can only be used in a server.',
+        components: []
+      });
+      return;
+    }
+    
+    const member = interaction.member as GuildMember;
+    
+    // Toggle the Exploration role
+    const action = await toggleRole(member, 'Exploration');
+    
+    let message: string;
+    if (action === 'added') {
+      message = `✅ You have joined the **Exploration** role! Welcome to the frontier scouts.`;
+    } else {
+      message = `❌ You have left the **Exploration** role. Safe travels, capsuleer.`;
+    }
+    
+    // Update the ephemeral message with the result
+    await interaction.update({
+      content: message,
+      components: [] // Remove the buttons since action is complete
+    });
+    
+    console.log(`Role button interaction: ${member.user.tag} ${action} Exploration role`);
+    
+  } catch (error) {
+    console.error('Error handling role button interaction:', error);
+    
+    try {
+      await interaction.update({
+        content: 'An error occurred while updating your role. Please try again or contact an administrator.',
+        components: []
+      });
+    } catch (updateError) {
+      console.error('Failed to update interaction after error:', updateError);
+    }
+  }
 };
 
 /**
