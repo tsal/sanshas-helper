@@ -57,15 +57,20 @@ export const createRoleButtons = (): ActionRowBuilder<ButtonBuilder>[] => {
  */
 export const hasRole = async (member: GuildMember, roleName: string): Promise<boolean> => {
   if (!member.guild) {
+    console.log(`hasRole: Member ${member.user.tag} is not in a guild`);
     return false;
   }
   
   const role = await findRoleByName(member.guild, roleName);
   if (!role) {
+    console.log(`hasRole: Role "${roleName}" not found in guild ${member.guild.name}`);
     return false;
   }
   
-  return member.roles.cache.has(role.id);
+  const hasTheRole = member.roles.cache.has(role.id);
+  console.log(`hasRole: ${member.user.tag} ${hasTheRole ? 'has' : 'does not have'} role "${roleName}" (ID: ${role.id})`);
+  
+  return hasTheRole;
 };
 
 /**
@@ -172,7 +177,7 @@ export const handleRoleButtonInteraction = async (interaction: ButtonInteraction
  */
 export const roleCommand: RoleCommand = {
   data: new SlashCommandBuilder()
-    .setName('roles')
+    .setName('eve-roles')
     .setDescription('Select your EVE Frontier roles'),
   
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {

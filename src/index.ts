@@ -1,6 +1,7 @@
-import { Client, GatewayIntentBits } from 'discord.js';
+import { Client, GatewayIntentBits, REST, Routes } from 'discord.js';
 import * as dotenv from 'dotenv';
 import { ensureAllRoles } from './discord';
+import { roleCommand, handleRoleButtonInteraction } from './discord/roles';
 
 // Load environment variables
 dotenv.config();
@@ -18,6 +19,35 @@ const client: Client = new Client({
 });
 
 /**
+ * Registers slash commands with Discord
+ * @param clientId - The bot's client ID
+ */
+const registerCommands = async (clientId: string): Promise<void> => {
+  const token: string | undefined = process.env.DISCORD_TOKEN;
+  
+  if (token === undefined) {
+    throw new Error('DISCORD_TOKEN environment variable is not set');
+  }
+  
+  const rest = new REST({ version: '10' }).setToken(token);
+  
+  try {
+    console.log('Started refreshing application (/) commands.');
+    
+    const commands = [roleCommand.data.toJSON()];
+    
+    await rest.put(
+      Routes.applicationCommands(clientId),
+      { body: commands }
+    );
+    
+    console.log('Successfully reloaded application (/) commands.');
+  } catch (error) {
+    console.error('Error registering commands:', error);
+  }
+};
+
+/**
  * Bot ready event handler
  * Logs when the bot successfully connects to Discord
  */
@@ -30,6 +60,9 @@ client.once('ready', async (): Promise<void> => {
   console.log(`Bot is ready! Logged in as ${client.user.tag}`);
   console.log(`Bot ID: ${client.user.id}`);
   console.log(`Serving ${client.guilds.cache.size} guilds`);
+  
+  // Register slash commands
+  await registerCommands(client.user.id);
   
   // Check management roles in all existing guilds
   console.log('Setting up roles in existing guilds...');
@@ -64,6 +97,37 @@ client.on('guildCreate', async (guild): Promise<void> => {
     console.log(`Successfully set up ${roles.length} roles in guild: ${guild.name}`);
   } catch (error) {
     console.error(`Failed to set up roles in guild ${guild.name}:`, error);
+  }
+});
+
+/**
+ * Interaction create event handler
+ * Handles slash commands and button interactions
+ */
+client.on('interactionCreate', async (interaction): Promise<void> => {
+  try {
+    if (interaction.isChatInputCommand()) {
+      // Handle slash commands
+      if (interaction.commandName === 'eve-roles') {
+        await roleCommand.execute(interaction);
+      }
+    } else if (interaction.isButton()) {
+      // Handle button interactions
+      await handleRoleButtonInteraction(interaction);
+    }
+  } catch (error) {
+    console.error('Error handling interaction:', error);
+    
+    try {
+      if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
+        await interaction.reply({
+          content: 'An error occurred while processing your request.',
+          ephemeral: true
+        });
+      }
+    } catch (replyError) {
+      console.error('Failed to send error reply:', replyError);
+    }
   }
 });
 
