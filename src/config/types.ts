@@ -5,7 +5,8 @@ import { Role as FrontierRole, isRole } from '../frontier/types';
  */
 export enum ResponseTheme {
   KUVAKEI = 'kuvakei',
-  TRIGLAV = 'triglav'
+  TRIGLAV = 'triglav',
+  PLAIN = 'plain'
 }
 
 /**

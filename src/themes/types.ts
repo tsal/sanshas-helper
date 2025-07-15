@@ -5,7 +5,7 @@
  * (Kuvakei and Triglav) while preserving their unique characteristics.
  */
 
-import { MessageCategory as KuvakeiMessageCategory } from '../kuvakei/types';
+import { MessageCategory as KuvakeiMessageCategory } from './kuvakei/types';
 
 /**
  * Unified message category enum that both themes share

@@ -7,11 +7,32 @@
 
 import { ResponseTheme, getBotConfig } from '../config';
 import { ThemeMessage, MessageCategory } from './types';
-import { getRandomMessage as getKuvakeiMessage, getMessageByContext as getKuvakeiByContext } from '../kuvakei';
-import { getRandomMessage as getTriglavMessage, getMessageByContext as getTriglavByContext } from '../triglav';
+import { Theme } from './base';
+import { kuvakeiTheme } from './kuvakei';
+import { triglavTheme } from './triglav';
+import { plainTheme } from './plain';
 
 // Re-export types
 export { ThemeMessage, MessageCategory } from './types';
+export { Theme } from './base';
+
+/**
+ * Theme registry - maps theme names to their implementations
+ */
+const themes: Record<ResponseTheme, Theme> = {
+  [ResponseTheme.KUVAKEI]: kuvakeiTheme,
+  [ResponseTheme.TRIGLAV]: triglavTheme,
+  [ResponseTheme.PLAIN]: plainTheme
+};
+
+/**
+ * Gets the currently active theme based on configuration
+ * @returns The active Theme instance
+ */
+const getActiveTheme = (): Theme => {
+  const config = getBotConfig();
+  return themes[config.responseTheme] || themes[ResponseTheme.KUVAKEI];
+};
 
 /**
  * Retrieves a themed message based on the current RESPONSE_THEME configuration
@@ -20,33 +41,10 @@ export { ThemeMessage, MessageCategory } from './types';
  * @returns A ThemeMessage matching the criteria from the configured theme
  */
 export const getThemeMessage = (category: MessageCategory, context?: string): ThemeMessage => {
-  const config = getBotConfig();
-  
-  if (config.responseTheme === ResponseTheme.TRIGLAV) {
-    const triglavMessage = context 
-      ? getTriglavByContext(category, context)
-      : getTriglavMessage(category);
-    
-    // Convert TriglavMessage to ThemeMessage (removes troikaAspect field)
-    const result: ThemeMessage = {
-      text: triglavMessage.text,
-      category: triglavMessage.category
-    };
-    
-    if (triglavMessage.context !== undefined) {
-      result.context = triglavMessage.context;
-    }
-    
-    return result;
-  } else {
-    // Default to Kuvakei theme
-    const kuvakeiMessage = context 
-      ? getKuvakeiByContext(category, context)
-      : getKuvakeiMessage(category);
-    
-    // KuvakeiMessage already matches ThemeMessage interface
-    return kuvakeiMessage;
-  }
+  const theme = getActiveTheme();
+  return context 
+    ? theme.getMessageByContext(category, context)
+    : theme.getRandomMessage(category);
 };
 
 /**

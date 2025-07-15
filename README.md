@@ -81,10 +81,28 @@ Manages EVE Frontier activity roles:
 ```
 src/
 ├── config/          # Bot configuration and environment parsing
-├── discord/         # Discord.js integration and role management  
+│   ├── types.ts     # Configuration interfaces and parsing logic
+│   └── __tests__/   # Configuration tests
+├── discord/         # Discord.js integration and role management
+│   ├── roles.ts     # Role commands and InteractionCollector logic
+│   ├── management.ts # Role creation and hierarchy management
+│   ├── types.ts     # Discord-specific type definitions
+│   └── __tests__/   # Discord integration tests
 ├── frontier/        # EVE Frontier role definitions
-├── kuvakei/         # Thematic messaging system
-└── index.ts         # Bot entry point
+│   ├── types.ts     # Role enums and validation
+│   └── __tests__/   # Role definition tests
+├── themes/          # Unified messaging system and themes
+│   ├── types.ts     # Theme message interfaces
+│   ├── index.ts     # Theme switching logic
+│   ├── kuvakei/     # Sansha Kuvakei consciousness theme
+│   │   ├── types.ts     # Kuvakei message types
+│   │   ├── messages.ts  # Kuvakei message collections
+│   │   └── index.ts     # Kuvakei theme exports
+│   └── triglav/     # Triglavian Collective theme
+│       ├── types.ts     # Triglav message types with Troika aspects
+│       ├── messages.ts  # Triglav message collections
+│       └── index.ts     # Triglav theme exports
+└── index.ts         # Bot entry point and event handlers
 ```
 
 ### Testing
