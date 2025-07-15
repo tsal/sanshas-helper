@@ -34,6 +34,30 @@ const getRoleEmoji = (roleName: string): string => {
 };
 
 /**
+ * Schedules automatic deletion of an interaction reply after a specified timeout
+ * @param interaction - The interaction whose reply should be deleted
+ * @param timeoutMs - Time in milliseconds before deletion
+ * @returns Promise that resolves when deletion completes
+ */
+const scheduleMessageDeletion = (
+  interaction: ChatInputCommandInteraction | ButtonInteraction, 
+  timeoutMs: number
+): Promise<void> => {
+  return new Promise((resolve) => {
+    setTimeout(async () => {
+      try {
+        await interaction.deleteReply();
+        resolve();
+      } catch (error) {
+        // Message might already be deleted or interaction might be invalid
+        // This is often expected behavior, so we resolve rather than reject
+        resolve();
+      }
+    }, timeoutMs);
+  });
+};
+
+/**
  * Creates button components for role selection
  * @returns Array of action rows containing role buttons
  */
@@ -146,9 +170,9 @@ const isRoleSupported = (roleName: string): boolean => {
  * @param roleName - The name of the unsupported role
  */
 const handleUnsupportedRole = async (interaction: ButtonInteraction, roleName: string): Promise<void> => {
-  await interaction.update({
+  await interaction.reply({
     content: `${getRandomMessage(MessageCategory.WARNING).text} The "${roleName}" role is not yet accessible.`,
-    components: []
+    flags: MessageFlags.Ephemeral
   });
 };
 
@@ -168,20 +192,14 @@ const handleRoleToggle = async (interaction: ButtonInteraction, member: GuildMem
     message = `${getRandomMessage(MessageCategory.ROLE_REMOVAL).text} You have been removed from the **${roleName}** role.`;
   }
   
-  await interaction.update({
+  // Send ephemeral response about the role change
+  await interaction.reply({
     content: message,
-    components: []
+    flags: MessageFlags.Ephemeral
   });
   
-  // Auto-delete the message after 15 seconds
-  setTimeout(async () => {
-    try {
-      await interaction.deleteReply();
-    } catch (error) {
-      // Message might already be deleted or interaction might be invalid
-      // This is expected behavior, no need to log
-    }
-  }, 15 * 1000); // 15 seconds in milliseconds
+  // Schedule auto-deletion of the role change notification after 15 seconds
+  scheduleMessageDeletion(interaction, 15 * 1000);
 };
 
 /**
@@ -205,9 +223,9 @@ export const handleRoleButtonInteraction = async (interaction: ButtonInteraction
     
     // Validate guild and member context
     if (!interaction.guild || !interaction.member) {
-      await interaction.update({
+      await interaction.reply({
         content: getRandomMessage(MessageCategory.ERROR).text,
-        components: []
+        flags: MessageFlags.Ephemeral
       });
       return;
     }
@@ -221,12 +239,12 @@ export const handleRoleButtonInteraction = async (interaction: ButtonInteraction
     console.error('Error handling role button interaction:', error);
     
     try {
-      await interaction.update({
+      await interaction.reply({
         content: getRandomMessage(MessageCategory.ERROR).text,
-        components: []
+        flags: MessageFlags.Ephemeral
       });
-    } catch (updateError) {
-      console.error('Failed to update interaction after error:', updateError);
+    } catch (replyError) {
+      console.error('Failed to reply to interaction after error:', replyError);
     }
   }
 };
@@ -249,6 +267,9 @@ export const roleCommand: RoleCommand = {
         components: roleButtons,
         flags: MessageFlags.Ephemeral
       });
+      
+      // Schedule auto-dismissal of the role selection message after 1 minute
+      scheduleMessageDeletion(interaction, 60 * 1000);
       
     } catch (error) {
       console.error('Error executing role command:', error);
