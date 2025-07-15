@@ -1,13 +1,14 @@
 /**
- * Themes module - Unified messaging system for bot themes
+ * Themes module - Dynamic messaging system for bot themes
  * 
  * This module provides a bridge between different theme message systems
- * (Kuvakei and Triglav) based on the RESPONSE_THEME configuration.
+ * using a simple runtime registry approach.
  */
 
-import { ResponseTheme, getBotConfig } from '../config';
+import { getBotConfig } from '../config';
 import { ThemeMessage, MessageCategory } from './types';
 import { Theme } from './base';
+import { themeRegistry } from './loader';
 import { kuvakeiTheme } from './kuvakei';
 import { triglavTheme } from './triglav';
 import { plainTheme } from './plain';
@@ -15,14 +16,16 @@ import { plainTheme } from './plain';
 // Re-export types
 export { ThemeMessage, MessageCategory } from './types';
 export { Theme } from './base';
+export { themeRegistry } from './loader';
 
 /**
- * Theme registry - maps theme names to their implementations
+ * Initialize the theme system by registering all available themes
+ * Should be called once at application startup
  */
-const themes: Record<ResponseTheme, Theme> = {
-  [ResponseTheme.KUVAKEI]: kuvakeiTheme,
-  [ResponseTheme.TRIGLAV]: triglavTheme,
-  [ResponseTheme.PLAIN]: plainTheme
+export const initializeThemes = (): void => {
+  themeRegistry.register(kuvakeiTheme);
+  themeRegistry.register(triglavTheme);
+  themeRegistry.register(plainTheme);
 };
 
 /**
@@ -31,7 +34,14 @@ const themes: Record<ResponseTheme, Theme> = {
  */
 const getActiveTheme = (): Theme => {
   const config = getBotConfig();
-  return themes[config.responseTheme] || themes[ResponseTheme.KUVAKEI];
+  const themeName = config.responseTheme;
+  
+  const theme = themeRegistry.getTheme(themeName);
+  if (!theme) {
+    return themeRegistry.getTheme('kuvakei') || kuvakeiTheme;
+  }
+  
+  return theme;
 };
 
 /**

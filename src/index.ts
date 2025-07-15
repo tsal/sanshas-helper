@@ -3,6 +3,7 @@ import * as dotenv from 'dotenv';
 import { ensureAllRoles } from './discord';
 import { roleCommand } from './discord/roles';
 import { getBotConfig } from './config';
+import { initializeThemes } from './themes';
 
 // Load environment variables
 dotenv.config();
@@ -163,6 +164,9 @@ const startBot = async (): Promise<void> => {
     console.error('DISCORD_TOKEN environment variable is not set');
     process.exit(1);
   }
+
+  // Initialize theme system
+  initializeThemes();
   
   try {
     await client.login(token);
