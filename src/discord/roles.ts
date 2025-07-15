@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, ButtonInteraction, GuildMember, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, ButtonInteraction, GuildMember, MessageFlags, ComponentType } from 'discord.js';
 import { getBotConfig } from '../config';
 import { findRoleByName } from './management';
 import { getThemeMessage, MessageCategory } from '../themes';
@@ -31,30 +31,6 @@ const getRoleEmoji = (roleName: string): string => {
     default:
       return '⚪'; // White circle for unknown roles
   }
-};
-
-/**
- * Schedules automatic deletion of an interaction reply after a specified timeout
- * @param interaction - The interaction whose reply should be deleted
- * @param timeoutMs - Time in milliseconds before deletion
- * @returns Promise that resolves when deletion completes
- */
-const scheduleMessageDeletion = (
-  interaction: ChatInputCommandInteraction | ButtonInteraction, 
-  timeoutMs: number
-): Promise<void> => {
-  return new Promise((resolve) => {
-    setTimeout(async () => {
-      try {
-        await interaction.deleteReply();
-        resolve();
-      } catch (error) {
-        // Message might already be deleted or interaction might be invalid
-        // This is often expected behavior, so we resolve rather than reject
-        resolve();
-      }
-    }, timeoutMs);
-  });
 };
 
 /**
@@ -141,20 +117,6 @@ export const toggleRole = async (member: GuildMember, roleName: string): Promise
 };
 
 /**
- * Validates that the interaction is a role button interaction
- * @param interaction - The button interaction to validate
- * @returns The role name if valid, null if invalid
- */
-const validateRoleInteraction = (interaction: ButtonInteraction): string | null => {
-  if (!interaction.customId.startsWith('role_')) {
-    return null;
-  }
-  
-  // Extract role from custom ID (e.g., 'role_Exploration' -> 'Exploration')
-  return interaction.customId.replace('role_', '');
-};
-
-/**
  * Checks if the role is supported for assignment
  * @param roleName - The name of the role to check
  * @returns True if the role is supported
@@ -165,93 +127,40 @@ const isRoleSupported = (roleName: string): boolean => {
 };
 
 /**
- * Handles unsupported role button clicks
- * @param interaction - The button interaction
- * @param roleName - The name of the unsupported role
+ * Creates disabled versions of role buttons for when the collector ends
+ * @returns Array of action rows containing disabled role buttons
  */
-const handleUnsupportedRole = async (interaction: ButtonInteraction, roleName: string): Promise<void> => {
-  await interaction.reply({
-    content: `${getThemeMessage(MessageCategory.WARNING).text} The "${roleName}" role is not yet accessible.`,
-    flags: MessageFlags.Ephemeral
-  });
-};
-
-/**
- * Handles the role toggle operation and sends response
- * @param interaction - The button interaction
- * @param member - The guild member
- * @param roleName - The name of the role to toggle
- */
-const handleRoleToggle = async (interaction: ButtonInteraction, member: GuildMember, roleName: string): Promise<void> => {
-  const action = await toggleRole(member, roleName);
+const createDisabledRoleButtons = (): ActionRowBuilder<ButtonBuilder>[] => {
+  const config = getBotConfig();
+  const buttons: ButtonBuilder[] = [];
   
-  let message: string;
-  if (action === 'added') {
-    message = `${getThemeMessage(MessageCategory.ROLE_ASSIGNMENT).text} You have been assigned the **${roleName}** role.`;
-  } else {
-    message = `${getThemeMessage(MessageCategory.ROLE_REMOVAL).text} You have been removed from the **${roleName}** role.`;
-  }
-  
-  // Send ephemeral response about the role change
-  await interaction.reply({
-    content: message,
-    flags: MessageFlags.Ephemeral
+  // Create disabled buttons for each configured available role
+  config.availableRoles.forEach((role) => {
+    const emoji = getRoleEmoji(role);
+    const button = new ButtonBuilder()
+      .setCustomId(`role_${role}`)
+      .setLabel(`${emoji} ${role}`)
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(true);
+    
+    buttons.push(button);
   });
   
-  // Schedule auto-deletion of the role change notification after 15 seconds
-  scheduleMessageDeletion(interaction, 15 * 1000);
-};
-
-/**
- * Handles button interactions for role selection
- * Supports all configured roles and uses helper functions for clean organization
- * @param interaction - The button interaction to handle
- */
-export const handleRoleButtonInteraction = async (interaction: ButtonInteraction): Promise<void> => {
-  try {
-    // Validate that this is a role button interaction
-    const roleName = validateRoleInteraction(interaction);
-    if (!roleName) {
-      return;
-    }
-    
-    // Check if the role is supported for assignment
-    if (!isRoleSupported(roleName)) {
-      await handleUnsupportedRole(interaction, roleName);
-      return;
-    }
-    
-    // Validate guild and member context
-    if (!interaction.guild || !interaction.member) {
-      await interaction.reply({
-        content: getThemeMessage(MessageCategory.ERROR).text,
-        flags: MessageFlags.Ephemeral
-      });
-      return;
-    }
-    
-    const member = interaction.member as GuildMember;
-    
-    // Handle the role toggle operation
-    await handleRoleToggle(interaction, member, roleName);
-    
-  } catch (error) {
-    console.error('Error handling role button interaction:', error);
-    
-    try {
-      await interaction.reply({
-        content: getThemeMessage(MessageCategory.ERROR).text,
-        flags: MessageFlags.Ephemeral
-      });
-    } catch (replyError) {
-      console.error('Failed to reply to interaction after error:', replyError);
-    }
+  // Discord allows max 5 buttons per row, so we might need multiple rows
+  const rows: ActionRowBuilder<ButtonBuilder>[] = [];
+  for (let i = 0; i < buttons.length; i += 5) {
+    const row = new ActionRowBuilder<ButtonBuilder>()
+      .addComponents(buttons.slice(i, i + 5));
+    rows.push(row);
   }
+  
+  return rows;
 };
 
 /**
  * Role selection slash command
  * Presents an ephemeral message with buttons for each available role
+ * Uses InteractionCollector for proper scoped button handling
  */
 export const roleCommand: RoleCommand = {
   data: new SlashCommandBuilder()
@@ -262,14 +171,101 @@ export const roleCommand: RoleCommand = {
     try {
       const roleButtons = createRoleButtons();
       
+      // Send initial reply with role buttons
       await interaction.reply({
         content: getThemeMessage(MessageCategory.GREETING).text,
         components: roleButtons,
         flags: MessageFlags.Ephemeral
       });
       
-      // Schedule auto-dismissal of the role selection message after 1 minute
-      scheduleMessageDeletion(interaction, 60 * 1000);
+      // Create collector for button interactions on this specific message
+      const collector = interaction.channel?.createMessageComponentCollector({
+        componentType: ComponentType.Button,
+        filter: (buttonInteraction) => {
+          // Only collect interactions from the original user and role buttons
+          return buttonInteraction.user.id === interaction.user.id && 
+                 buttonInteraction.customId.startsWith('role_');
+        },
+        time: 60_000 // 60 seconds timeout
+      });
+      
+      if (!collector) {
+        console.error('Failed to create interaction collector - channel not available');
+        return;
+      }
+      
+      // Handle button interactions
+      collector.on('collect', async (buttonInteraction: ButtonInteraction) => {
+        try {
+          // Extract role name from button ID
+          const roleName = buttonInteraction.customId.replace('role_', '');
+          
+          // Check if the role is supported for assignment
+          if (!isRoleSupported(roleName)) {
+            await buttonInteraction.reply({
+              content: `${getThemeMessage(MessageCategory.WARNING).text} The "${roleName}" role is not yet accessible.`,
+              flags: MessageFlags.Ephemeral
+            });
+            return;
+          }
+          
+          // Validate guild and member context
+          if (!buttonInteraction.guild || !buttonInteraction.member) {
+            await buttonInteraction.reply({
+              content: getThemeMessage(MessageCategory.ERROR).text,
+              flags: MessageFlags.Ephemeral
+            });
+            return;
+          }
+          
+          const member = buttonInteraction.member as GuildMember;
+          
+          // Toggle the role
+          const action = await toggleRole(member, roleName);
+          
+          let message: string;
+          if (action === 'added') {
+            message = `${getThemeMessage(MessageCategory.ROLE_ASSIGNMENT).text} You have been assigned the **${roleName}** role.`;
+          } else {
+            message = `${getThemeMessage(MessageCategory.ROLE_REMOVAL).text} You have been removed from the **${roleName}** role.`;
+          }
+          
+          // Send ephemeral response about the role change
+          await buttonInteraction.reply({
+            content: message,
+            flags: MessageFlags.Ephemeral
+          });
+          
+        } catch (error) {
+          console.error('Error handling role button interaction:', error);
+          
+          try {
+            await buttonInteraction.reply({
+              content: getThemeMessage(MessageCategory.ERROR).text,
+              flags: MessageFlags.Ephemeral
+            });
+          } catch (replyError) {
+            console.error('Failed to reply to button interaction after error:', replyError);
+          }
+        }
+      });
+      
+      // Handle collector end
+      collector.on('end', async (collected) => {
+        try {
+          // Disable all buttons when collector ends
+          const disabledButtons = createDisabledRoleButtons();
+          
+          await interaction.editReply({
+            content: `${getThemeMessage(MessageCategory.FAREWELL).text} _Role selection has timed out._`,
+            components: disabledButtons
+          });
+          
+          console.log(`Role selection collector ended. Collected ${collected.size} interactions.`);
+        } catch (error) {
+          console.error('Error updating message when collector ended:', error);
+        }
+      });
       
     } catch (error) {
       console.error('Error executing role command:', error);

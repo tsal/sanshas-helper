@@ -1,7 +1,7 @@
 import { Client, GatewayIntentBits, REST, Routes } from 'discord.js';
 import * as dotenv from 'dotenv';
 import { ensureAllRoles } from './discord';
-import { roleCommand, handleRoleButtonInteraction } from './discord/roles';
+import { roleCommand } from './discord/roles';
 import { getBotConfig } from './config';
 
 // Load environment variables
@@ -103,7 +103,7 @@ client.on('guildCreate', async (guild): Promise<void> => {
 
 /**
  * Interaction create event handler
- * Handles slash commands and button interactions
+ * Handles slash commands - button interactions are now handled by InteractionCollector
  */
 client.on('interactionCreate', async (interaction): Promise<void> => {
   try {
@@ -113,10 +113,8 @@ client.on('interactionCreate', async (interaction): Promise<void> => {
       if (interaction.commandName === config.rolesCommandName) {
         await roleCommand.execute(interaction);
       }
-    } else if (interaction.isButton()) {
-      // Handle button interactions
-      await handleRoleButtonInteraction(interaction);
     }
+    // Button interactions are now handled by InteractionCollector in roleCommand
   } catch (error) {
     console.error('Error handling interaction:', error);
     
