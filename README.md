@@ -1,92 +1,78 @@
 # Sansha's Helper
 
-A Discord bot for EVE Frontier role management with a Sansha's Nation thematic twist. Built with TypeScript and Discord.js.
+A Discord bot for EVE Frontier role management with thematic messaging. Built with TypeScript and Discord.js.
 
 ## Quick Start
 
 ### Prerequisites
 
 - Node.js 18+ 
-- A Discord application and bot token
-- TypeScript knowledge for customization
+- Discord application and bot token
 
-### Local Development
+### Setup
 
-1. **Clone and install dependencies:**
+1. **Install:**
    ```bash
    git clone https://github.com/tsal/sanshas-helper.git
    cd sanshas-helper
    npm install
    ```
 
-2. **Set up environment:**
+2. **Configure:**
    ```bash
    cp local-example.env .env
-   # Edit .env with your Discord bot credentials
+   # Edit .env with your bot token
    ```
 
-3. **Configure your Discord bot:**
-   - Go to https://discord.com/developers/applications
-   - Create a new application or use existing one
-   - Copy Bot Token to your `.env`
-   - Enable the following bot permissions: `Manage Roles`, `Send Messages`, `Use Slash Commands`
-
-4. **Run in development:**
+3. **Run:**
    ```bash
    npm run dev
-   ```
-
-5. **Run tests:**
-   ```bash
-   npm test
    ```
 
 ## Configuration
 
 ### Environment Variables
 
-Set these in your environment:
-
 ```bash
 DISCORD_TOKEN=your_bot_token
 
-# Optional: Limit available roles (comma-separated)
-TRIBE_ROLES=Exploration,PVP,Mining
+# Optional configurations
+TRIBE_ROLES=Exploration,PVP,Mining     # Limit available roles
+RESPONSE_THEME=kuvakei                 # Message theme: kuvakei|triglav  
+ROLES_COMMAND_NAME=eve-roles           # Slash command name
 ```
 
 ### Discord Setup
 
-1. **Role positioning**: If you edit your server roles, do not change the names and ensure the bot's role is positioned above the roles it will manage in your server's role hierarchy
+Bot needs `Manage Roles`, `Send Messages`, `Use Slash Commands` permissions. Position bot role above managed roles.
 
-2. **Test the slash command**: `/eve-roles` should show role selection buttons
+## Features
 
-The bot will automatically create the following roles as needed:
-- `Exploration` (Purple: #EB459E)
-- `Industry` (Yellow: #FEE75C) 
-- `Mining` (Green: #57F287)
-- `PVE` (Orange: #F97316)
-- `PVP` (Red: #ED4245)
+### Role Management
 
-### Role Selection
+Manages EVE Frontier activity roles:
+- `Exploration` (🟣) - `Industry` (🟡) - `Mining` (🟢) - `PVE` (🟠) - `PVP` (🔴)
 
-Control which roles are available by setting `TRIBE_ROLES`:
+### Themes
 
-```bash
-# Enable all roles (default)
-# TRIBE_ROLES=
+- **Kuvakei**: Sansha's Nation consciousness remnant
+- **Triglav**: Triglavian Collective proving trials
 
-# Enable specific roles only
-TRIBE_ROLES=Exploration,PVP,Mining
+### Commands
 
-# Enable single role
-TRIBE_ROLES=PVP
-```
+- Default: `/eve-roles` (configurable via `ROLES_COMMAND_NAME`)
 
-### Customization
+## Configuration Options
 
-- **Thematic messages**: Edit `src/kuvakei/messages.ts`
-- **Role colors**: Modify `src/discord/roles.ts` emoji mappings
-- **Auto-deletion timing**: Change timeout in `handleRoleToggle` function
+### Required
+
+- **`DISCORD_TOKEN`**: Bot token from Discord application configuration panel
+
+### Optional
+
+- **`TRIBE_ROLES`**: Comma-separated list of enabled roles (default: all roles)
+- **`RESPONSE_THEME`**: Message theme - `kuvakei` or `triglav` (default: `kuvakei`)
+- **`ROLES_COMMAND_NAME`**: Slash command name (default: `eve-roles`)
 
 ## Development
 
