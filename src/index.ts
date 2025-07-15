@@ -2,6 +2,7 @@ import { Client, GatewayIntentBits, REST, Routes } from 'discord.js';
 import * as dotenv from 'dotenv';
 import { ensureAllRoles } from './discord';
 import { roleCommand, handleRoleButtonInteraction } from './discord/roles';
+import { getBotConfig } from './config';
 
 // Load environment variables
 dotenv.config();
@@ -108,7 +109,8 @@ client.on('interactionCreate', async (interaction): Promise<void> => {
   try {
     if (interaction.isChatInputCommand()) {
       // Handle slash commands
-      if (interaction.commandName === 'eve-roles') {
+      const config = getBotConfig();
+      if (interaction.commandName === config.rolesCommandName) {
         await roleCommand.execute(interaction);
       }
     } else if (interaction.isButton()) {

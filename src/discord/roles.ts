@@ -255,7 +255,7 @@ export const handleRoleButtonInteraction = async (interaction: ButtonInteraction
  */
 export const roleCommand: RoleCommand = {
   data: new SlashCommandBuilder()
-    .setName('eve-roles')
+    .setName(getBotConfig().rolesCommandName)
     .setDescription('Select your EVE Frontier roles'),
   
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
