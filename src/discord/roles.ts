@@ -127,37 +127,6 @@ const isRoleSupported = (roleName: string): boolean => {
 };
 
 /**
- * Creates disabled versions of role buttons for when the collector ends
- * @returns Array of action rows containing disabled role buttons
- */
-const createDisabledRoleButtons = (): ActionRowBuilder<ButtonBuilder>[] => {
-  const config = getBotConfig();
-  const buttons: ButtonBuilder[] = [];
-  
-  // Create disabled buttons for each configured available role
-  config.availableRoles.forEach((role) => {
-    const emoji = getRoleEmoji(role);
-    const button = new ButtonBuilder()
-      .setCustomId(`role_${role}`)
-      .setLabel(`${emoji} ${role}`)
-      .setStyle(ButtonStyle.Secondary)
-      .setDisabled(true);
-    
-    buttons.push(button);
-  });
-  
-  // Discord allows max 5 buttons per row, so we might need multiple rows
-  const rows: ActionRowBuilder<ButtonBuilder>[] = [];
-  for (let i = 0; i < buttons.length; i += 5) {
-    const row = new ActionRowBuilder<ButtonBuilder>()
-      .addComponents(buttons.slice(i, i + 5));
-    rows.push(row);
-  }
-  
-  return rows;
-};
-
-/**
  * Role selection slash command
  * Presents an ephemeral message with buttons for each available role
  * Uses InteractionCollector for proper scoped button handling
@@ -253,17 +222,12 @@ export const roleCommand: RoleCommand = {
       // Handle collector end
       collector.on('end', async (collected) => {
         try {
-          // Disable all buttons when collector ends
-          const disabledButtons = createDisabledRoleButtons();
-          
-          await interaction.editReply({
-            content: `${getThemeMessage(MessageCategory.FAREWELL).text} _Role selection has timed out._`,
-            components: disabledButtons
-          });
+          // Delete the ephemeral message when collector ends
+          await interaction.deleteReply();
           
           console.log(`Role selection collector ended. Collected ${collected.size} interactions.`);
         } catch (error) {
-          console.error('Error updating message when collector ended:', error);
+          console.error('Error deleting message when collector ended:', error);
         }
       });
       
