@@ -1,7 +1,7 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, ButtonInteraction, GuildMember, MessageFlags } from 'discord.js';
 import { getBotConfig } from '../config';
 import { findRoleByName } from './management';
-import { getRandomMessage, MessageCategory } from '../kuvakei';
+import { getThemeMessage, MessageCategory } from '../themes';
 
 /**
  * Role selection command interface
@@ -171,7 +171,7 @@ const isRoleSupported = (roleName: string): boolean => {
  */
 const handleUnsupportedRole = async (interaction: ButtonInteraction, roleName: string): Promise<void> => {
   await interaction.reply({
-    content: `${getRandomMessage(MessageCategory.WARNING).text} The "${roleName}" role is not yet accessible.`,
+    content: `${getThemeMessage(MessageCategory.WARNING).text} The "${roleName}" role is not yet accessible.`,
     flags: MessageFlags.Ephemeral
   });
 };
@@ -187,9 +187,9 @@ const handleRoleToggle = async (interaction: ButtonInteraction, member: GuildMem
   
   let message: string;
   if (action === 'added') {
-    message = `${getRandomMessage(MessageCategory.ROLE_ASSIGNMENT).text} You have been assigned the **${roleName}** role.`;
+    message = `${getThemeMessage(MessageCategory.ROLE_ASSIGNMENT).text} You have been assigned the **${roleName}** role.`;
   } else {
-    message = `${getRandomMessage(MessageCategory.ROLE_REMOVAL).text} You have been removed from the **${roleName}** role.`;
+    message = `${getThemeMessage(MessageCategory.ROLE_REMOVAL).text} You have been removed from the **${roleName}** role.`;
   }
   
   // Send ephemeral response about the role change
@@ -224,7 +224,7 @@ export const handleRoleButtonInteraction = async (interaction: ButtonInteraction
     // Validate guild and member context
     if (!interaction.guild || !interaction.member) {
       await interaction.reply({
-        content: getRandomMessage(MessageCategory.ERROR).text,
+        content: getThemeMessage(MessageCategory.ERROR).text,
         flags: MessageFlags.Ephemeral
       });
       return;
@@ -240,7 +240,7 @@ export const handleRoleButtonInteraction = async (interaction: ButtonInteraction
     
     try {
       await interaction.reply({
-        content: getRandomMessage(MessageCategory.ERROR).text,
+        content: getThemeMessage(MessageCategory.ERROR).text,
         flags: MessageFlags.Ephemeral
       });
     } catch (replyError) {
@@ -263,7 +263,7 @@ export const roleCommand: RoleCommand = {
       const roleButtons = createRoleButtons();
       
       await interaction.reply({
-        content: getRandomMessage(MessageCategory.GREETING).text,
+        content: getThemeMessage(MessageCategory.GREETING).text,
         components: roleButtons,
         flags: MessageFlags.Ephemeral
       });
@@ -276,7 +276,7 @@ export const roleCommand: RoleCommand = {
       
       if (!interaction.replied) {
         await interaction.reply({
-          content: getRandomMessage(MessageCategory.ERROR).text,
+          content: getThemeMessage(MessageCategory.ERROR).text,
           flags: MessageFlags.Ephemeral
         });
       }
