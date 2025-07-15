@@ -19,6 +19,11 @@ const AVAILABLE_ROLES_ENV_KEY = 'TRIBE_ROLES';
 const RESPONSE_THEME_ENV_KEY = 'RESPONSE_THEME';
 
 /**
+ * Environment variable key for configuring roles command name
+ */
+const ROLES_COMMAND_NAME_ENV_KEY = 'ROLES_COMMAND_NAME';
+
+/**
  * Interface for bot configuration
  */
 export interface BotConfig {
@@ -30,6 +35,10 @@ export interface BotConfig {
    * The response theme to use for bot messages
    */
   responseTheme: ResponseTheme;
+  /**
+   * The name to use for the roles slash command
+   */
+  rolesCommandName: string;
 }
 
 /**
@@ -56,6 +65,28 @@ const parseResponseTheme = (): ResponseTheme => {
   // Invalid theme, fall back to kuvakei
   console.warn(`⚠️ Invalid response theme: "${envValue}". Valid themes are: ${Object.values(ResponseTheme).join(', ')}. Falling back to kuvakei.`);
   return ResponseTheme.KUVAKEI;
+};
+
+/**
+ * Parses the ROLES_COMMAND_NAME environment variable
+ * @returns A valid command name string, defaulting to 'eve-roles'
+ */
+const parseRolesCommandName = (): string => {
+  const envValue = process.env[ROLES_COMMAND_NAME_ENV_KEY];
+  
+  // If not set, default to 'eve-roles'
+  if (envValue === undefined) {
+    return 'eve-roles';
+  }
+  
+  // Basic validation - must be non-empty string
+  const trimmedValue = envValue.trim();
+  if (trimmedValue === '') {
+    console.warn('⚠️ ROLES_COMMAND_NAME is empty, falling back to "eve-roles"');
+    return 'eve-roles';
+  }
+  
+  return trimmedValue;
 };
 
 /**
@@ -112,9 +143,11 @@ const parseAvailableRoles = (): FrontierRole[] => {
 export const getBotConfig = (): BotConfig => {
   const availableRoles = parseAvailableRoles();
   const responseTheme = parseResponseTheme();
+  const rolesCommandName = parseRolesCommandName();
   
   return {
     availableRoles,
-    responseTheme
+    responseTheme,
+    rolesCommandName
   };
 };
