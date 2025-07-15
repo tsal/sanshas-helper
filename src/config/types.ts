@@ -137,6 +137,9 @@ export const getBotConfig = (): BotConfig => {
   const responseTheme = parseResponseTheme();
   const rolesCommandName = parseRolesCommandName();
   
+  // Log configuration summary at startup
+  console.log(`Bot Configuration: Theme=${responseTheme}, Command=${rolesCommandName}, Roles=[${availableRoles.join(', ')}]`);
+  
   return {
     availableRoles,
     responseTheme,
