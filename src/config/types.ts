@@ -53,12 +53,9 @@ const parseResponseTheme = (): ResponseTheme => {
     return ResponseTheme.KUVAKEI;
   }
   
-  console.log(`Parsing RESPONSE_THEME: "${envValue}"`);
-  
   // Check if it's a valid theme
   const normalizedValue = envValue.toLowerCase();
   if (Object.values(ResponseTheme).includes(normalizedValue as ResponseTheme)) {
-    console.log(`✓ Using response theme: ${normalizedValue}`);
     return normalizedValue as ResponseTheme;
   }
   
@@ -103,11 +100,8 @@ const parseAvailableRoles = (): FrontierRole[] => {
   
   // If empty string, return all roles with log since it was explicitly set
   if (envValue === '') {
-    console.log('TRIBE_ROLES set to empty string, using all roles');
     return Object.values(FrontierRole);
   }
-  
-  console.log(`Parsing TRIBE_ROLES: "${envValue}"`);
   
   // Split by comma and trim whitespace
   const roleStrings = envValue.split(',').map(role => role.trim());
@@ -120,7 +114,6 @@ const parseAvailableRoles = (): FrontierRole[] => {
     
     if (isRole(roleString)) {
       validRoles.push(roleString);
-      console.log(`✓ Added role: ${roleString}`);
     } else {
       console.warn(`⚠️ Skipping invalid role: "${roleString}". Valid roles are: ${Object.values(FrontierRole).join(', ')}`);
     }
@@ -132,7 +125,6 @@ const parseAvailableRoles = (): FrontierRole[] => {
     return Object.values(FrontierRole);
   }
   
-  console.log(`Configured ${validRoles.length} tribe roles: ${validRoles.join(', ')}`);
   return validRoles;
 };
 

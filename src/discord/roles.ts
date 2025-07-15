@@ -220,12 +220,10 @@ export const roleCommand: RoleCommand = {
       });
       
       // Handle collector end
-      collector.on('end', async (collected) => {
+      collector.on('end', async () => {
         try {
           // Delete the ephemeral message when collector ends
           await interaction.deleteReply();
-          
-          console.log(`Role selection collector ended. Collected ${collected.size} interactions.`);
         } catch (error) {
           console.error('Error deleting message when collector ended:', error);
         }
