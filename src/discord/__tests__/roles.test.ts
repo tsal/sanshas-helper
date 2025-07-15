@@ -14,7 +14,6 @@ describe('createRoleButtons', () => {
     
     // Should have one button per frontier role
     expect(allButtons).toHaveLength(Object.values(FrontierRole).length);
-    expect(allButtons).toHaveLength(5);
   });
 
   it('should create the expected number of buttons', () => {
@@ -22,7 +21,6 @@ describe('createRoleButtons', () => {
     const totalButtons = result.reduce((sum, row) => sum + row.components.length, 0);
     
     expect(totalButtons).toBe(Object.values(FrontierRole).length);
-    expect(totalButtons).toBe(5);
   });
 
   it('should handle row organization correctly for many buttons', () => {

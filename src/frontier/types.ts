@@ -22,7 +22,15 @@ export enum Role {
   /**
    * PVP role for players focused on player versus player combat
    */
-  PVP = 'PVP'
+  PVP = 'PVP',
+  /**
+   * Nerd role for software engineers and technical players
+   */
+  Nerd = 'Nerd',
+  /**
+   * Diplomacy role for players focused on negotiations and alliance relations
+   */
+  Diplomacy = 'Diplomacy'
 }
 
 /**
