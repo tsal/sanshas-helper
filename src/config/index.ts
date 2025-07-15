@@ -3,4 +3,4 @@
  * Handles bot configuration from environment variables
  */
 
-export { BotConfig, getBotConfig } from './types';
+export { BotConfig, ResponseTheme, getBotConfig } from './types';

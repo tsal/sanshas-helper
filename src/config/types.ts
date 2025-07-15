@@ -1,9 +1,22 @@
 import { Role as FrontierRole, isRole } from '../frontier/types';
 
 /**
+ * Available response themes for the bot
+ */
+export enum ResponseTheme {
+  KUVAKEI = 'kuvakei',
+  TRIGLAV = 'triglav'
+}
+
+/**
  * Environment variable key for configuring tribe roles
  */
 const AVAILABLE_ROLES_ENV_KEY = 'TRIBE_ROLES';
+
+/**
+ * Environment variable key for configuring response theme
+ */
+const RESPONSE_THEME_ENV_KEY = 'RESPONSE_THEME';
 
 /**
  * Interface for bot configuration
@@ -13,7 +26,37 @@ export interface BotConfig {
    * Array of available frontier roles for the bot to manage
    */
   availableRoles: FrontierRole[];
+  /**
+   * The response theme to use for bot messages
+   */
+  responseTheme: ResponseTheme;
 }
+
+/**
+ * Parses the RESPONSE_THEME environment variable
+ * @returns A valid ResponseTheme value, defaulting to KUVAKEI
+ */
+const parseResponseTheme = (): ResponseTheme => {
+  const envValue = process.env[RESPONSE_THEME_ENV_KEY];
+  
+  // If not set, default to kuvakei
+  if (envValue === undefined) {
+    return ResponseTheme.KUVAKEI;
+  }
+  
+  console.log(`Parsing RESPONSE_THEME: "${envValue}"`);
+  
+  // Check if it's a valid theme
+  const normalizedValue = envValue.toLowerCase();
+  if (Object.values(ResponseTheme).includes(normalizedValue as ResponseTheme)) {
+    console.log(`✓ Using response theme: ${normalizedValue}`);
+    return normalizedValue as ResponseTheme;
+  }
+  
+  // Invalid theme, fall back to kuvakei
+  console.warn(`⚠️ Invalid response theme: "${envValue}". Valid themes are: ${Object.values(ResponseTheme).join(', ')}. Falling back to kuvakei.`);
+  return ResponseTheme.KUVAKEI;
+};
 
 /**
  * Parses the TRIBE_ROLES environment variable
@@ -68,8 +111,10 @@ const parseAvailableRoles = (): FrontierRole[] => {
  */
 export const getBotConfig = (): BotConfig => {
   const availableRoles = parseAvailableRoles();
+  const responseTheme = parseResponseTheme();
   
   return {
-    availableRoles
+    availableRoles,
+    responseTheme
   };
 };
