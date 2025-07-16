@@ -123,5 +123,29 @@ export const DEFAULT_ROLE_CONFIGS: Record<string, RoleConfig> = {
     permissions: [],
     hoist: false,
     mentionable: true
+  },
+  [FrontierRole.Nerd]: {
+    name: 'Nerd',
+    color: 0x5865F2, // Blue for technical/analytical work
+    reason: 'EVE Frontier technical/software engineering role',
+    permissions: [],
+    hoist: false,
+    mentionable: true
+  },
+  [FrontierRole.Hauling]: {
+    name: 'Hauling',
+    color: 0x8B4513, // Brown for logistics/transport
+    reason: 'EVE Frontier hauling and logistics role',
+    permissions: [],
+    hoist: false,
+    mentionable: true
+  },
+  [FrontierRole.Market]: {
+    name: 'Market',
+    color: 0xFFD700, // Gold for trading/commerce
+    reason: 'EVE Frontier trading and commerce role',
+    permissions: [],
+    hoist: false,
+    mentionable: true
   }
 };
