@@ -57,17 +57,12 @@ const registerCommands = async (clientId: string): Promise<void> => {
 const updateVersionRecords = async (): Promise<void> => {
   const config = getBotConfig();
   
-  // Only run if database is enabled
+  // Only run if database is enabled and initialized
   if (!isDatabaseEnabled(config.databasePath)) {
     return;
   }
   
   try {
-    // Initialize repository if not already done
-    if (!repository.isInitialized()) {
-      await repository.initialize({ databasePath: config.databasePath! });
-    }
-    
     const currentVersion = getBotVersion();
     
     // Update version record for each guild
@@ -118,6 +113,17 @@ client.once('ready', async (): Promise<void> => {
   
   // Register slash commands
   await registerCommands(client.user.id);
+  
+  // Initialize database if configured
+  const config = getBotConfig();
+  if (config.databasePath) {
+    try {
+      await repository.initialize({ databasePath: config.databasePath });
+      console.log('Database initialized successfully');
+    } catch (error) {
+      console.warn('Failed to initialize database, database features disabled:', error);
+    }
+  }
   
   // Check management roles in all existing guilds
   console.log('Setting up roles in existing guilds...');

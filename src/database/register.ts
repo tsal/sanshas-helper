@@ -21,12 +21,27 @@ let dbInstance: Awaited<ReturnType<typeof JSONFilePreset<DatabaseData>>> | null 
 const objectTypeRegistry = new Set<string>();
 
 /**
- * Checks if the database is enabled based on the provided path
+ * Resets the database instance and object registry (for testing only)
+ * @internal
+ */
+export const resetDatabaseForTesting = (): void => {
+  dbInstance = null;
+  objectTypeRegistry.clear();
+};
+
+/**
+ * Checks if the database is enabled and properly initialized
  * @param databasePath - The database path from configuration, can be null
- * @returns True if database is enabled (path is not null), false otherwise
+ * @returns True if database is enabled (path is not null) and repository is initialized, false otherwise
  */
 export const isDatabaseEnabled = (databasePath: string | null): boolean => {
-  return databasePath !== null;
+  if (databasePath === null) {
+    return false;
+  }
+  
+  // Import repository here to avoid circular dependency
+  const { repository } = require('./repository');
+  return repository.isInitialized();
 };
 
 /**
@@ -44,7 +59,13 @@ export const registerObject = (objectClass: DatabaseObjectConstructor): void => 
  */
 const initializeDatabase = async (databasePath: string): Promise<void> => {
   if (dbInstance === null) {
-    dbInstance = await JSONFilePreset<DatabaseData>(databasePath, {});
+    try {
+      dbInstance = await JSONFilePreset<DatabaseData>(databasePath, {});
+    } catch (error) {
+      // Reset dbInstance to null if initialization fails
+      dbInstance = null;
+      throw error;
+    }
   }
 };
 

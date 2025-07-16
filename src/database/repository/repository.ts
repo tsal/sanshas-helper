@@ -29,31 +29,35 @@ class DatabaseRepository implements Repository {
   /**
    * Store an object in the database
    * @param object - The object to store
-   * @throws Error if repository is not initialized
    */
   async store<T extends DatabaseObject>(object: T): Promise<void> {
-    this.ensureInitialized();
-    await storeObject(this.config!.databasePath, object);
+    if (!this.isInitialized()) {
+      console.warn('Repository is not initialized, skipping store operation');
+      return;
+    }
+    
+    try {
+      await storeObject(this.config!.databasePath, object);
+    } catch (error) {
+      console.error('Failed to store object:', error);
+    }
   }
 
   /**
    * Store a collection in the database
    * @param storageKey - The storage key for the collection
    * @param collection - The collection to store
-   * @throws Error if repository is not initialized
    */
   async storeCollection<T = any>(storageKey: string, collection: DatabaseCollection<T>): Promise<void> {
-    this.ensureInitialized();
-    await storeCollection(this.config!.databasePath, storageKey, collection);
-  }
-
-  /**
-   * Ensure the repository is initialized
-   * @throws Error if not initialized
-   */
-  private ensureInitialized(): void {
     if (!this.isInitialized()) {
-      throw new Error('Repository is not initialized. Call initialize() first.');
+      console.warn('Repository is not initialized, skipping store collection operation');
+      return;
+    }
+    
+    try {
+      await storeCollection(this.config!.databasePath, storageKey, collection);
+    } catch (error) {
+      console.error('Failed to store collection:', error);
     }
   }
 }
