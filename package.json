@@ -28,13 +28,14 @@
   "homepage": "https://github.com/tsal/sanshas-helper#readme",
   "dependencies": {
     "discord.js": "^14.21.0",
-    "dotenv": "^17.2.0"
+    "dotenv": "^17.2.0",
+    "lowdb": "^7.0.1"
   },
   "devDependencies": {
-    "typescript": "^5.8.3",
+    "@types/jest": "^30.0.0",
     "@types/node": "^24.0.13",
     "jest": "^30.0.4",
-    "@types/jest": "^30.0.0",
-    "ts-jest": "^29.4.0"
+    "ts-jest": "^29.4.0",
+    "typescript": "^5.8.3"
   }
 }

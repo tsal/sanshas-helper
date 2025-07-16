@@ -25,6 +25,11 @@ const RESPONSE_THEME_ENV_KEY = 'RESPONSE_THEME';
 const ROLES_COMMAND_NAME_ENV_KEY = 'ROLES_COMMAND_NAME';
 
 /**
+ * Environment variable key for configuring database path
+ */
+const DATABASE_PATH_ENV_KEY = 'DATABASE_PATH';
+
+/**
  * Interface for bot configuration
  */
 export interface BotConfig {
@@ -40,6 +45,10 @@ export interface BotConfig {
    * The name to use for the roles slash command
    */
   rolesCommandName: string;
+  /**
+   * The path to the database file, null if database is disabled
+   */
+  databasePath: string | null;
 }
 
 /**
@@ -82,6 +91,27 @@ const parseRolesCommandName = (): string => {
   if (trimmedValue === '') {
     console.warn('⚠️ ROLES_COMMAND_NAME is empty, falling back to "eve-roles"');
     return 'eve-roles';
+  }
+  
+  return trimmedValue;
+};
+
+/**
+ * Parses the DATABASE_PATH environment variable
+ * @returns Database path string or null if database is disabled
+ */
+const parseDatabasePath = (): string | null => {
+  const envValue = process.env[DATABASE_PATH_ENV_KEY];
+  
+  // If not set, database is disabled
+  if (envValue === undefined) {
+    return null;
+  }
+  
+  // If empty string, database is disabled
+  const trimmedValue = envValue.trim();
+  if (trimmedValue === '') {
+    return null;
   }
   
   return trimmedValue;
@@ -137,13 +167,16 @@ export const getBotConfig = (): BotConfig => {
   const availableRoles = parseAvailableRoles();
   const responseTheme = parseResponseTheme();
   const rolesCommandName = parseRolesCommandName();
+  const databasePath = parseDatabasePath();
   
   // Log configuration summary at startup
-  console.log(`Bot Configuration: Theme=${responseTheme}, Command=${rolesCommandName}, Roles=[${availableRoles.join(', ')}]`);
+  const databaseStatus = databasePath ? `enabled (${databasePath})` : 'disabled';
+  console.log(`Bot Configuration: Theme=${responseTheme}, Command=${rolesCommandName}, Database=${databaseStatus}, Roles=[${availableRoles.join(', ')}]`);
   
   return {
     availableRoles,
     responseTheme,
-    rolesCommandName
+    rolesCommandName,
+    databasePath
   };
 };
