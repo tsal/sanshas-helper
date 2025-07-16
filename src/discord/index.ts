@@ -4,4 +4,5 @@
  */
 
 export { roleCommand, RoleCommand, createRoleButtons } from './roles';
+export { fleetCommand, FleetCommand, createFleetButtons } from './fleets';
 export { checkManagementRole, ensureAllRoles } from './management';
