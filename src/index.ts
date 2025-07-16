@@ -4,6 +4,7 @@ import { ensureAllRoles } from './discord';
 import { roleCommand } from './discord/roles';
 import { getBotConfig } from './config';
 import { initializeThemes } from './themes';
+import { isDatabaseEnabled, repository, Version, getBotVersion } from './database';
 
 // Load environment variables
 dotenv.config();
@@ -50,6 +51,58 @@ const registerCommands = async (clientId: string): Promise<void> => {
 };
 
 /**
+ * Updates version records for all guilds if database is enabled
+ * Keeps timestamps fresh and updates version numbers if changed
+ */
+const updateVersionRecords = async (): Promise<void> => {
+  const config = getBotConfig();
+  
+  // Only run if database is enabled
+  if (!isDatabaseEnabled(config.databasePath)) {
+    return;
+  }
+  
+  try {
+    // Initialize repository if not already done
+    if (!repository.isInitialized()) {
+      await repository.initialize({ databasePath: config.databasePath! });
+    }
+    
+    const currentVersion = getBotVersion();
+    
+    // Update version record for each guild
+    for (const guild of client.guilds.cache.values()) {
+      const versionRecord = new Version(guild.id, currentVersion);
+      await repository.store(versionRecord);
+    }
+  } catch (error) {
+    console.error('Failed to update version records:', error);
+  }
+};
+
+/**
+ * Schedules periodic version updates every 12 hours
+ */
+const scheduleVersionUpdates = (): void => {
+  const config = getBotConfig();
+  
+  // Only schedule if database is enabled
+  if (!isDatabaseEnabled(config.databasePath)) {
+    return;
+  }
+  
+  const TWELVE_HOURS = 12 * 60 * 60 * 1000;
+  
+  // Run immediately on startup
+  updateVersionRecords();
+  
+  // Then every 12 hours
+  setInterval(() => {
+    updateVersionRecords();
+  }, TWELVE_HOURS);
+};
+
+/**
  * Bot ready event handler
  * Logs when the bot successfully connects to Discord
  */
@@ -77,6 +130,9 @@ client.once('ready', async (): Promise<void> => {
     }
   }
   console.log('Role setup complete.');
+  
+  // Schedule periodic version updates (only if database is enabled)
+  scheduleVersionUpdates();
 });
 
 /**
