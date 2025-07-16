@@ -3,5 +3,12 @@
  * Handles data persistence using lowdb
  */
 
-export { DatabaseObject, DatabaseConfig, DEFAULT_DATABASE_CONFIG } from './types';
-export { registerObject, isDatabaseEnabled } from './register';
+export { 
+  DatabaseObject, 
+  DatabaseCollection, 
+  DatabaseConfig, 
+  DEFAULT_DATABASE_CONFIG,
+  DatabaseObjectConstructor,
+  DatabaseEntity 
+} from './types';
+export { registerObject, storeObject, storeCollection, isDatabaseEnabled } from './register';
