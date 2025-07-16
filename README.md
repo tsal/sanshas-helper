@@ -52,6 +52,7 @@ Bot needs `Manage Roles`, `Send Messages`, `Use Slash Commands` permissions. Pos
 
 Manages EVE Frontier activity roles:
 - `Exploration` (🟣) - `Industry` (🟡) - `Mining` (🟢) - `PVE` (🟠) - `PVP` (🔴)
+- `Nerd` (🔵) - `Hauling` (🟤) - `Market` (💰)
 
 ### Themes
 
