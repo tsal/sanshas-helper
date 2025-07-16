@@ -29,7 +29,7 @@ describe('getBotConfig', () => {
     const config = getBotConfig();
     
     expect(config.availableRoles).toEqual(Object.values(FrontierRole));
-    expect(config.availableRoles).toHaveLength(7);
+    expect(config.availableRoles).toHaveLength(8);
     expect(config.responseTheme).toBe(ResponseTheme.KUVAKEI);
   });
 

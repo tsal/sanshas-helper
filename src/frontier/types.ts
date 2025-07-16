@@ -28,9 +28,13 @@ export enum Role {
    */
   Nerd = 'Nerd',
   /**
-   * Diplomacy role for players focused on negotiations and alliance relations
+   * Hauling role for players focused on transportation and logistics
    */
-  Diplomacy = 'Diplomacy'
+  Hauling = 'Hauling',
+  /**
+   * Market role for players focused on trading and commerce
+   */
+  Market = 'Market'
 }
 
 /**

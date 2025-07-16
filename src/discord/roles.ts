@@ -28,6 +28,12 @@ const getRoleEmoji = (roleName: string): string => {
       return '🟠'; // Orange - moderate danger
     case 'pvp':
       return '🔴'; // Red - maximum danger
+    case 'nerd':
+      return '🔵'; // Blue - technical/analytical work
+    case 'hauling':
+      return '🟤'; // Brown - logistics/transport, moderate risk
+    case 'market':
+      return '💰'; // Money bag - trading/commerce
     default:
       return '⚪'; // White circle for unknown roles
   }
