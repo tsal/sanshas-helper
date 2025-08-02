@@ -38,8 +38,8 @@ const registerCommands = async (clientId: string): Promise<void> => {
   try {
     console.log('Started refreshing application (/) commands.');
     
-    // Global commands (role command)
-    const globalCommands = [roleCommand.data.toJSON()];
+    // Global commands
+    const globalCommands = [roleCommand.data.toJSON(), intelCommand.data.toJSON()];
     
     await rest.put(
       Routes.applicationCommands(clientId),
@@ -47,17 +47,6 @@ const registerCommands = async (clientId: string): Promise<void> => {
     );
     
     console.log('Successfully reloaded global application (/) commands.');
-    
-    // Guild-specific commands (intel command)
-    const guildId = '245179286535798784';
-    const guildCommands = [intelCommand.data.toJSON()];
-    
-    await rest.put(
-      Routes.applicationGuildCommands(clientId, guildId),
-      { body: guildCommands }
-    );
-    
-    console.log(`Successfully reloaded guild commands for guild ID: ${guildId}`);
     
   } catch (error) {
     console.error('Error registering commands:', error);
