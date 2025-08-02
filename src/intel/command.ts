@@ -2,17 +2,18 @@ import {
   SlashCommandBuilder, 
   ChatInputCommandInteraction,
   MessageFlags,
-  EmbedBuilder 
+  EmbedBuilder,
+  SlashCommandSubcommandsOnlyBuilder 
 } from 'discord.js';
 import { getThemeMessage, MessageCategory } from '../themes';
-import { IntelEntity, RiftIntelItem, isRiftIntelItem } from './types';
+import { IntelEntity, RiftIntelItem, isRiftIntelItem, IntelItem, storeIntelItem } from './types';
 import { repository } from '../database/repository';
 
 /**
  * Intel command interface for Discord interactions
  */
 export interface IntelCommand {
-  data: SlashCommandBuilder;
+  data: SlashCommandBuilder | SlashCommandSubcommandsOnlyBuilder;
   execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
 }
 
@@ -21,12 +22,39 @@ export interface IntelCommand {
  */
 class IntelCommandHandler implements IntelCommand {
   /**
-   * Command definition
-   * TODO: Future iterations will add subcommands
+   * Command definition with subcommands
    */
   public readonly data = new SlashCommandBuilder()
     .setName('intel')
-    .setDescription('🕵️ View current intelligence reports');
+    .setDescription('🕵️ Manage intelligence reports')
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('rift')
+        .setDescription('Add a rift intel report')
+        .addStringOption(option =>
+          option
+            .setName('type')
+            .setDescription('Rift type code')
+            .setRequired(true)
+        )
+        .addStringOption(option =>
+          option
+            .setName('system')
+            .setDescription('System name where the rift is located')
+            .setRequired(true)
+        )
+        .addStringOption(option =>
+          option
+            .setName('near')
+            .setDescription('What the rift is near (e.g., P1L4)')
+            .setRequired(false)
+        )
+    )
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('list')
+        .setDescription('View current intelligence reports')
+    );
 
   /**
    * Execute the command
@@ -40,15 +68,69 @@ class IntelCommandHandler implements IntelCommand {
         return;
       }
 
-      // Purge stale intel items and fetch current ones
-      await this.purgeStaleIntel(guildId);
-      const items = await this.fetchIntel(guildId);
+      const subcommand = interaction.options.getSubcommand();
       
-      await this.sendIntelReport(interaction, items);
+      switch (subcommand) {
+        case 'rift':
+          await this.handleRiftSubcommand(interaction, guildId);
+          break;
+        case 'list':
+          await this.handleListSubcommand(interaction, guildId);
+          break;
+        default:
+          await this.sendErrorResponse(interaction, 'Unknown subcommand.');
+      }
     } catch (error) {
       console.error('Intel command execution failed:', error);
       await this.sendErrorResponse(interaction, 'Command execution failed.');
     }
+  }
+
+  /**
+   * Handle rift subcommand - adds a new rift intel item
+   * @param interaction - Discord interaction object
+   * @param guildId - Guild ID
+   */
+  private async handleRiftSubcommand(interaction: ChatInputCommandInteraction, guildId: string): Promise<void> {
+    const type = interaction.options.getString('type', true);
+    const system = interaction.options.getString('system', true);
+    const near = interaction.options.getString('near') || ''; // Default to empty string if not provided
+    
+    // Generate unique ID for the intel item
+    const id = `rift-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    const riftIntel: RiftIntelItem = {
+      type,
+      systemName: system,
+      near
+    };
+    
+    const intelItem: IntelItem = {
+      id,
+      timestamp: new Date().toISOString(),
+      reporter: interaction.user.id,
+      content: riftIntel
+    };
+    
+    await storeIntelItem(guildId, intelItem);
+    
+    await this.sendSuccessResponse(
+      interaction, 
+      `Rift intel added: ${type} in ${system}${near ? ` near ${near}` : ''}`
+    );
+  }
+
+  /**
+   * Handle list subcommand - shows current intel items
+   * @param interaction - Discord interaction object
+   * @param guildId - Guild ID
+   */
+  private async handleListSubcommand(interaction: ChatInputCommandInteraction, guildId: string): Promise<void> {
+    // Purge stale intel items and fetch current ones
+    await this.purgeStaleIntel(guildId);
+    const items = await this.fetchIntel(guildId);
+    
+    await this.sendIntelReport(interaction, items);
   }
 
   /**
@@ -146,7 +228,11 @@ class IntelCommandHandler implements IntelCommand {
     items: IntelEntity[]
   ): Promise<void> {
     if (items.length === 0) {
-      await this.sendSuccessResponse(interaction, 'No intel items found.');
+      await interaction.reply({
+        content: getThemeMessage(MessageCategory.SUCCESS, 'No intel items found.').text,
+        embeds: [],
+        flags: MessageFlags.Ephemeral
+      });
       return;
     }
     
