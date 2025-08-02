@@ -5,7 +5,7 @@ import { roleCommand } from './discord/roles';
 import { intelCommand } from './intel/command';
 import { getBotConfig } from './config';
 import { initializeThemes } from './themes';
-import { isDatabaseEnabled, repository, Version, getBotVersion } from './database';
+import { isDatabaseEnabled, repository, Version, getBotVersion, shouldRegisterCommands } from './database';
 
 // Load environment variables
 dotenv.config();
@@ -33,6 +33,24 @@ const registerCommands = async (clientId: string): Promise<void> => {
     throw new Error('DISCORD_TOKEN environment variable is not set');
   }
   
+  const config = getBotConfig();
+  const currentVersion = getBotVersion();
+  
+  // Check if we should register global commands based on database version tracking
+  if (isDatabaseEnabled(config.databasePath)) {
+    try {
+      const allVersions = await repository.getAll(Version, 'globals');
+      const storedGlobalsVersion = allVersions.length > 0 ? allVersions[0] : null;
+      
+      if (!shouldRegisterCommands(storedGlobalsVersion, currentVersion)) {
+        console.log(`Skipping global command registration - already at version ${currentVersion}`);
+        return;
+      }
+    } catch (error) {
+      console.warn('Failed to check stored globals version, proceeding with registration:', error);
+    }
+  }
+  
   const rest = new REST({ version: '10' }).setToken(token);
   
   try {
@@ -47,6 +65,17 @@ const registerCommands = async (clientId: string): Promise<void> => {
     );
     
     console.log('Successfully reloaded global application (/) commands.');
+    
+    // Update the globals version record after successful registration
+    if (isDatabaseEnabled(config.databasePath)) {
+      try {
+        const globalsVersion = new Version('globals', currentVersion);
+        await repository.store(globalsVersion);
+        console.log(`Updated globals version record to ${currentVersion}`);
+      } catch (error) {
+        console.error('Failed to update globals version record:', error);
+      }
+    }
     
   } catch (error) {
     console.error('Error registering commands:', error);
