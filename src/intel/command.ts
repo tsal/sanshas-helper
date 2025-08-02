@@ -241,10 +241,11 @@ class IntelCommandHandler implements IntelCommand {
     embed.addFields({ name: 'Reporter', value: `<@${item.intelItem.reporter}>`, inline: true });
     
     const riftContent = item.intelItem.content as RiftIntelItem;
+    const nearValue = riftContent.near.trim() === '' ? '*( empty )*' : riftContent.near;
     embed.addFields(
       { name: 'Rift Type', value: riftContent.type, inline: true },
       { name: 'System', value: riftContent.systemName, inline: true },
-      { name: 'Lagrange Point', value: riftContent.near, inline: true }
+      { name: 'Near Gravity Well', value: nearValue, inline: true }
     );
     
     if (item.intelItem.location) {
