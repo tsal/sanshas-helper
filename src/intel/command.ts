@@ -3,8 +3,15 @@ import {
   ChatInputCommandInteraction,
   MessageFlags 
 } from 'discord.js';
-import { IntelCommand } from './types';
-import { getThemeMessage, MessageCategory } from '../../themes';
+import { getThemeMessage, MessageCategory } from '../themes';
+
+/**
+ * Intel command interface for Discord interactions
+ */
+export interface IntelCommand {
+  data: SlashCommandBuilder;
+  execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
+}
 
 /**
  * Intel Command Handler
