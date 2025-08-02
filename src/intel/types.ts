@@ -8,10 +8,22 @@ export interface IntelContentType {
 
 // Rift intel: name, system, lagrange point (e.g. P1L4, P1M2)
 export interface RiftIntelItem extends IntelContentType {
-  name: string;
+  type: string;
   systemName: string;
-  lPointName: string; // P1L4 = Planet 1, L-Point 4
+  near: string; // P1L4 = Planet 1, L-Point 4
 }
+
+// Type guard for RiftIntelItem validation
+export const isRiftIntelItem = (content: unknown): content is RiftIntelItem => {
+  if (typeof content !== 'object' || content === null) {
+    return false;
+  }
+  
+  const obj = content as Record<string, unknown>;
+  return typeof obj.type === 'string' && 
+         typeof obj.systemName === 'string' && 
+         typeof obj.near === 'string';
+};
 
 // Intel item: ID, timestamp, reporter, content, optional location
 export interface IntelItem {

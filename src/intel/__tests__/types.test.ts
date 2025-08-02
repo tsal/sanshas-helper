@@ -23,24 +23,24 @@ describe('Intel Types Module', () => {
   describe('RiftIntelItem interface', () => {
     it('should create a valid rift intel item', () => {
       const riftIntel: RiftIntelItem = {
-        name: 'Unstable Wormhole',
+        type: 'Unstable Wormhole',
         systemName: 'Jita',
-        lPointName: 'P1L4'
+        near: 'P1L4'
       };
 
-      expect(riftIntel.name).toBe('Unstable Wormhole');
+      expect(riftIntel.type).toBe('Unstable Wormhole');
       expect(riftIntel.systemName).toBe('Jita');
-      expect(riftIntel.lPointName).toBe('P1L4');
+      expect(riftIntel.near).toBe('P1L4');
     });
 
     it('should work with different lagrange point formats', () => {
       const riftIntel: RiftIntelItem = {
-        name: 'Quantum Anomaly',
+        type: 'Quantum Anomaly',
         systemName: 'Amarr',
-        lPointName: 'P1M2'
+        near: 'P1M2'
       };
 
-      expect(riftIntel.lPointName).toBe('P1M2');
+      expect(riftIntel.near).toBe('P1M2');
     });
   });
 
@@ -50,9 +50,9 @@ describe('Intel Types Module', () => {
       timestamp: '2025-08-02T10:30:00.000Z',
       reporter: '123456789012345678',
       content: {
-        name: 'Enemy Fleet Spotted',
+        type: 'Enemy Fleet Spotted',
         systemName: 'Jita',
-        lPointName: 'P1L4'
+        near: 'P1L4'
       } as RiftIntelItem,
       location: 'Jita'
     };
@@ -61,7 +61,7 @@ describe('Intel Types Module', () => {
       expect(validIntelItem.id).toBe('intel-123');
       expect(validIntelItem.timestamp).toBe('2025-08-02T10:30:00.000Z');
       expect(validIntelItem.reporter).toBe('123456789012345678');
-      expect((validIntelItem.content as RiftIntelItem).name).toBe('Enemy Fleet Spotted');
+      expect((validIntelItem.content as RiftIntelItem).type).toBe('Enemy Fleet Spotted');
       expect(validIntelItem.location).toBe('Jita');
     });
 
@@ -87,9 +87,9 @@ describe('Intel Types Module', () => {
       timestamp: '2025-08-02T10:30:00.000Z',
       reporter: '123456789012345678',
       content: {
-        name: 'Enemy Fleet',
+        type: 'Enemy Fleet',
         systemName: 'Jita',
-        lPointName: 'P1L4'
+        near: 'P1L4'
       } as RiftIntelItem,
       location: 'Jita'
     };
@@ -342,9 +342,9 @@ describe('Intel Types Module', () => {
       timestamp: '2025-08-02T12:00:00.000Z',
       reporter: '987654321098765432',
       content: {
-        name: 'Test Rift',
+        type: 'Test Rift',
         systemName: 'Test System',
-        lPointName: 'P1L1'
+        near: 'P1L1'
       } as RiftIntelItem,
       location: 'Test Location'
     };
@@ -379,9 +379,9 @@ describe('Intel Types Module', () => {
       timestamp: '2025-08-02T13:00:00.000Z',
       reporter: '555555555555555555',
       content: {
-        name: 'Storage Test Rift',
+        type: 'Storage Test Rift',
         systemName: 'Storage System',
-        lPointName: 'P2L3'
+        near: 'P2L3'
       } as RiftIntelItem
     };
 
@@ -493,9 +493,9 @@ describe('Intel Types Module', () => {
           timestamp: new Date().toISOString(),
           reporter: 'user123',
           content: {
-            name: 'Test Rift',
+            type: 'Test Rift',
             systemName: 'TestSystem',
-            lPointName: 'P1L1'
+            near: 'P1L1'
           } as RiftIntelItem
         };
         
@@ -519,9 +519,9 @@ describe('Intel Types Module', () => {
           timestamp: '2025-08-02T16:30:00.000Z',
           reporter: 'integrity-user',
           content: {
-            name: 'Complex Rift Data',
+            type: 'Complex Rift Data',
             systemName: 'Complex System',
-            lPointName: 'P3L5'
+            near: 'P3L5'
           } as RiftIntelItem,
           location: 'Complex Location with Special Characters: àáâãäå'
         };
@@ -540,9 +540,9 @@ describe('Intel Types Module', () => {
         expect(retrievedItem.timestamp).toBe(originalItem.timestamp);
         expect(retrievedItem.reporter).toBe(originalItem.reporter);
         expect(retrievedItem.location).toBe(originalItem.location);
-        expect((retrievedItem.content as RiftIntelItem).name).toBe('Complex Rift Data');
+        expect((retrievedItem.content as RiftIntelItem).type).toBe('Complex Rift Data');
         expect((retrievedItem.content as RiftIntelItem).systemName).toBe('Complex System');
-        expect((retrievedItem.content as RiftIntelItem).lPointName).toBe('P3L5');
+        expect((retrievedItem.content as RiftIntelItem).near).toBe('P3L5');
       });
 
       it('should handle multiple intel items in same guild', async () => {
@@ -551,13 +551,13 @@ describe('Intel Types Module', () => {
             id: 'multi-1',
             timestamp: '2025-08-02T17:00:00.000Z',
             reporter: 'user1',
-            content: { name: 'Rift 1', systemName: 'Sys1', lPointName: 'P1L1' } as RiftIntelItem
+            content: { type: 'Rift 1', systemName: 'Sys1', near: 'P1L1' } as RiftIntelItem
           },
           {
             id: 'multi-2', 
             timestamp: '2025-08-02T17:15:00.000Z',
             reporter: 'user2',
-            content: { name: 'Rift 2', systemName: 'Sys2', lPointName: 'P1L2' } as RiftIntelItem
+            content: { type: 'Rift 2', systemName: 'Sys2', near: 'P1L2' } as RiftIntelItem
           },
           {
             id: 'multi-3',
@@ -626,14 +626,14 @@ describe('Intel Types Module', () => {
           id: 'fresh-intel',
           timestamp: fresh.toISOString(),
           reporter: 'user1',
-          content: { name: 'Fresh Rift', systemName: 'FreshSys', lPointName: 'P1L1' } as RiftIntelItem
+          content: { type: 'Fresh Rift', systemName: 'FreshSys', near: 'P1L1' } as RiftIntelItem
         };
         
         const staleItem: IntelItem = {
           id: 'stale-intel',
           timestamp: stale.toISOString(),
           reporter: 'user2',
-          content: { name: 'Stale Rift', systemName: 'StaleSys', lPointName: 'P1L2' } as RiftIntelItem
+          content: { type: 'Stale Rift', systemName: 'StaleSys', near: 'P1L2' } as RiftIntelItem
         };
         
         // Store both items
@@ -700,19 +700,19 @@ describe('Intel Types Module', () => {
             id: 'fresh-1',
             timestamp: fresh1.toISOString(),
             reporter: 'user1',
-            content: { name: 'Fresh Rift 1', systemName: 'Sys1', lPointName: 'P1L1' } as RiftIntelItem
+            content: { type: 'Fresh Rift 1', systemName: 'Sys1', near: 'P1L1' } as RiftIntelItem
           },
           {
             id: 'fresh-2',
             timestamp: fresh2.toISOString(),
             reporter: 'user2',
-            content: { name: 'Fresh Rift 2', systemName: 'Sys2', lPointName: 'P1L2' } as RiftIntelItem
+            content: { type: 'Fresh Rift 2', systemName: 'Sys2', near: 'P1L2' } as RiftIntelItem
           },
           {
             id: 'fresh-3',
             timestamp: fresh3.toISOString(),
             reporter: 'user3',
-            content: { name: 'Fresh Rift 3', systemName: 'Sys3', lPointName: 'P1L3' } as RiftIntelItem
+            content: { type: 'Fresh Rift 3', systemName: 'Sys3', near: 'P1L3' } as RiftIntelItem
           }
         ];
         
@@ -744,9 +744,9 @@ describe('Intel Types Module', () => {
           timestamp: '2025-08-02T20:45:30.123Z',
           reporter: 'json-test-user',
           content: {
-            name: 'Complex Rift with Unicode: 测试 αβγ 🚀',
+            type: 'Complex Rift with Unicode: 测试 αβγ 🚀',
             systemName: 'System-With-Dashes_And_Underscores',
-            lPointName: 'P99L88'
+            near: 'P99L88'
           } as RiftIntelItem,
           location: 'Location with "quotes" and \'apostrophes\' and newlines\nand tabs\t'
         };
@@ -768,9 +768,9 @@ describe('Intel Types Module', () => {
         
         const retrievedContent = retrievedItem.content as RiftIntelItem;
         const originalContent = complexItem.content as RiftIntelItem;
-        expect(retrievedContent.name).toBe(originalContent.name);
+        expect(retrievedContent.type).toBe(originalContent.type);
         expect(retrievedContent.systemName).toBe(originalContent.systemName);
-        expect(retrievedContent.lPointName).toBe(originalContent.lPointName);
+        expect(retrievedContent.near).toBe(originalContent.near);
       });
 
       it('should handle edge case data correctly', async () => {

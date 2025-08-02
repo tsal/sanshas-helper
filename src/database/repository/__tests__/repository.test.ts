@@ -86,7 +86,7 @@ describe('Repository Integration Tests', () => {
         id: 'test-id-1',
         timestamp: new Date().toISOString(),
         reporter: 'user123',
-        content: { name: 'Test Rift', systemName: 'Alpha', lPointName: 'P1L4' },
+        content: { type: 'Test Rift', systemName: 'Alpha', near: 'P1L4' },
         location: 'Test Location'
       };
       const entity = new IntelEntity(testGuildId, intelItem);
