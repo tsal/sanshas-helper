@@ -26,7 +26,12 @@ class IntelCommandHandler implements IntelCommand {
    */
   public readonly data = new SlashCommandBuilder()
     .setName('intel')
-    .setDescription('🕵️ View current intelligence reports')
+    .setDescription('🕵️ Manage intelligence reports')
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('list')
+        .setDescription('View current intelligence reports')
+    )
     .addSubcommand(subcommand =>
       subcommand
         .setName('rift')
@@ -63,13 +68,17 @@ class IntelCommandHandler implements IntelCommand {
         return;
       }
 
-      const subcommand = interaction.options.getSubcommand(false);
+      const subcommand = interaction.options.getSubcommand();
       
-      if (subcommand === 'rift') {
-        await this.handleRiftSubcommand(interaction, guildId);
-      } else {
-        // Default behavior: show intel list
-        await this.handleListSubcommand(interaction, guildId);
+      switch (subcommand) {
+        case 'list':
+          await this.handleListSubcommand(interaction, guildId);
+          break;
+        case 'rift':
+          await this.handleRiftSubcommand(interaction, guildId);
+          break;
+        default:
+          await this.sendErrorResponse(interaction, 'Unknown subcommand.');
       }
     } catch (error) {
       console.error('Intel command execution failed:', error);

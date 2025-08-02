@@ -120,7 +120,7 @@ describe('Intel Command', () => {
       guildId: '123456789012345678',
       user: { id: 'user123' },
       options: {
-        getSubcommand: jest.fn(() => null), // Default behavior - no subcommand
+        getSubcommand: jest.fn(() => 'list'),
         getString: jest.fn()
       },
       reply: jest.fn()
@@ -130,21 +130,7 @@ describe('Intel Command', () => {
       (mockInteraction.reply as jest.Mock).mockResolvedValue(undefined);
     });
 
-    it('should handle default behavior (show intel list)', async () => {
-      await intelCommand.execute(mockInteraction);
-
-      expect(mockInteraction.reply).toHaveBeenCalledWith(
-        expect.objectContaining({
-          content: 'Test message',
-          embeds: expect.any(Array),
-          flags: expect.any(Number)
-        })
-      );
-    });
-
-    it('should handle explicit list subcommand (deprecated but supported)', async () => {
-      (mockInteraction.options.getSubcommand as jest.Mock).mockReturnValueOnce('list');
-
+    it('should handle list subcommand', async () => {
       await intelCommand.execute(mockInteraction);
 
       expect(mockInteraction.reply).toHaveBeenCalledWith(
