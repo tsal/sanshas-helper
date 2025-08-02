@@ -2,12 +2,6 @@ import { Role, Collection } from 'discord.js';
 import { findRoleByName, createRole, checkManagementRole } from '../management';
 import { RoleConfig } from '../types';
 
-// Mock console methods to avoid noise in tests
-const consoleSpy = {
-  log: jest.spyOn(console, 'log').mockImplementation(),
-  error: jest.spyOn(console, 'error').mockImplementation(),
-};
-
 describe('Discord Management', () => {
   let mockGuild: any;
   let mockRoleManager: any;
@@ -40,14 +34,6 @@ describe('Discord Management', () => {
 
     // Reset all mocks
     jest.clearAllMocks();
-    consoleSpy.log.mockClear();
-    consoleSpy.error.mockClear();
-  });
-
-  afterAll(() => {
-    // Restore console methods
-    consoleSpy.log.mockRestore();
-    consoleSpy.error.mockRestore();
   });
 
   describe('findRoleByName', () => {

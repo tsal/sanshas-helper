@@ -9,7 +9,7 @@ import { Version } from './entities/version';
 export const getBotVersion = (): string => {
   try {
     // Read package.json from the project root
-    const packageJsonPath = join(__dirname, '../../..', 'package.json');
+    const packageJsonPath = join(__dirname, '../..', 'package.json');
     const packageJsonContent = readFileSync(packageJsonPath, 'utf-8');
     const packageJson = JSON.parse(packageJsonContent);
     

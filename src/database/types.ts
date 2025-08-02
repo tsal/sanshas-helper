@@ -19,6 +19,14 @@ export interface DatabaseObjectConstructor {
 }
 
 /**
+ * Interface for objects that can be automatically purged based on age
+ * Requires ISO timestamp string for efficient storage
+ */
+export interface Purgeable {
+  timestamp: string;
+}
+
+/**
  * Abstract base class for database objects with static storageKey requirement
  */
 export abstract class DatabaseEntity implements DatabaseObject {

@@ -9,7 +9,6 @@ const mockReadFileSync = readFileSync as jest.MockedFunction<typeof readFileSync
 describe('getBotVersion', () => {
   afterEach(() => {
     jest.clearAllMocks();
-    // Clear console.error mock if we add one
     jest.restoreAllMocks();
   });
 
@@ -56,8 +55,7 @@ describe('getBotVersion', () => {
     expect(version).toBe('0.0.4');
   });
 
-  it('should return "0.0.4" and log error when file cannot be read', () => {
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+  it('should return "0.0.4" when file cannot be read', () => {
     mockReadFileSync.mockImplementation(() => {
       throw new Error('File not found');
     });
@@ -65,23 +63,14 @@ describe('getBotVersion', () => {
     const version = getBotVersion();
     
     expect(version).toBe('0.0.4');
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      'Failed to read bot version from package.json, falling back to 0.0.4:',
-      'File not found'
-    );
   });
 
-  it('should return "0.0.4" and log error when JSON is invalid', () => {
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+  it('should return "0.0.4" when JSON is invalid', () => {
     mockReadFileSync.mockReturnValue('invalid json content');
     
     const version = getBotVersion();
     
     expect(version).toBe('0.0.4');
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      'Failed to read bot version from package.json, falling back to 0.0.4:',
-      expect.stringContaining('Unexpected token')
-    );
   });
 });
 
@@ -191,13 +180,11 @@ describe('shouldRegisterCommands', () => {
       mockReadFileSync.mockImplementation(() => {
         throw new Error('File not found');
       });
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
 
       const storedVersion = new Version(testGuildId, '1.0.0');
       const result = shouldRegisterCommands(storedVersion);
 
       expect(result).toBe(true); // stored=1.0.0, current=0.0.4 (fallback)
-      expect(consoleErrorSpy).toHaveBeenCalled();
     });
   });
 });

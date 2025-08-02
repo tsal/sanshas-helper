@@ -2,6 +2,7 @@ import { Client, GatewayIntentBits, REST, Routes } from 'discord.js';
 import * as dotenv from 'dotenv';
 import { ensureAllRoles } from './discord';
 import { roleCommand } from './discord/roles';
+import { intelCommand } from './intel/command';
 import { getBotConfig } from './config';
 import { initializeThemes } from './themes';
 import { isDatabaseEnabled, repository, Version, getBotVersion } from './database';
@@ -37,14 +38,16 @@ const registerCommands = async (clientId: string): Promise<void> => {
   try {
     console.log('Started refreshing application (/) commands.');
     
-    const commands = [roleCommand.data.toJSON()];
+    // Global commands
+    const globalCommands = [roleCommand.data.toJSON(), intelCommand.data.toJSON()];
     
     await rest.put(
       Routes.applicationCommands(clientId),
-      { body: commands }
+      { body: globalCommands }
     );
     
-    console.log('Successfully reloaded application (/) commands.');
+    console.log('Successfully reloaded global application (/) commands.');
+    
   } catch (error) {
     console.error('Error registering commands:', error);
   }
@@ -111,6 +114,14 @@ client.once('ready', async (): Promise<void> => {
   console.log(`Bot ID: ${client.user.id}`);
   console.log(`Serving ${client.guilds.cache.size} guilds`);
   
+  // Log all guild IDs for reference
+  if (client.guilds.cache.size > 0) {
+    console.log('Connected to guilds:');
+    for (const guild of client.guilds.cache.values()) {
+      console.log(`  - ${guild.name} (ID: ${guild.id})`);
+    }
+  }
+  
   // Register slash commands
   await registerCommands(client.user.id);
   
@@ -128,11 +139,12 @@ client.once('ready', async (): Promise<void> => {
   // Check management roles in all existing guilds
   console.log('Setting up roles in existing guilds...');
   for (const guild of client.guilds.cache.values()) {
+    console.log(`Processing guild: ${guild.name} (ID: ${guild.id})`);
     try {
       const roles = await ensureAllRoles(guild);
-      console.log(`Successfully ensured ${roles.length} roles exist in guild: ${guild.name}`);
+      console.log(`Successfully ensured ${roles.length} roles exist in guild: ${guild.name} (ID: ${guild.id})`);
     } catch (error) {
-      console.error(`Failed to ensure roles in guild ${guild.name}:`, error);
+      console.error(`Failed to ensure roles in guild ${guild.name} (ID: ${guild.id}):`, error);
     }
   }
   console.log('Role setup complete.');
@@ -175,6 +187,8 @@ client.on('interactionCreate', async (interaction): Promise<void> => {
       const config = getBotConfig();
       if (interaction.commandName === config.rolesCommandName) {
         await roleCommand.execute(interaction);
+      } else if (interaction.commandName === 'intel') {
+        await intelCommand.execute(interaction);
       }
     }
     // Button interactions are now handled by InteractionCollector in roleCommand

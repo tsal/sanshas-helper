@@ -7,16 +7,16 @@ module.exports = {
     '**/?(*.)+(spec|test).ts'
   ],
   transform: {
-    '^.+\\.ts$': 'ts-jest'
+    '^.+\\.ts$': ['ts-jest', {
+      useESM: true
+    }]
   },
   transformIgnorePatterns: [
     'node_modules/(?!(lowdb)/)'
   ],
   extensionsToTreatAsEsm: ['.ts'],
-  globals: {
-    'ts-jest': {
-      useESM: true
-    }
+  moduleNameMapper: {
+    '^lowdb/node$': '<rootDir>/src/__mocks__/lowdb/node.ts'
   },
   collectCoverageFrom: [
     'src/**/*.ts',
@@ -24,5 +24,9 @@ module.exports = {
     '!src/**/__tests__/**'
   ],
   coverageDirectory: 'coverage',
-  coverageReporters: ['text', 'lcov', 'html']
+  coverageReporters: ['text', 'lcov', 'html'],
+  silent: true,
+  maxWorkers: 1,
+  cache: true,
+  testTimeout: 5000
 };
