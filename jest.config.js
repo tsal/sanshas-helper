@@ -15,6 +15,9 @@ module.exports = {
     'node_modules/(?!(lowdb)/)'
   ],
   extensionsToTreatAsEsm: ['.ts'],
+  moduleNameMapper: {
+    '^lowdb/node$': '<rootDir>/src/__mocks__/lowdb/node.ts'
+  },
   collectCoverageFrom: [
     'src/**/*.ts',
     '!src/**/*.d.ts',
