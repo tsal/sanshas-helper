@@ -92,12 +92,17 @@ class IntelCommandHandler implements IntelCommand {
    * @param guildId - Guild ID
    */
   private async handleRiftSubcommand(interaction: ChatInputCommandInteraction, guildId: string): Promise<void> {
+    console.log(`[Intel] Starting rift subcommand for guild ${guildId}`);
+    
     const type = interaction.options.getString('type', true);
     const system = interaction.options.getString('system', true);
     const near = interaction.options.getString('near') || ''; // Default to empty string if not provided
     
+    console.log(`[Intel] Rift parameters - type: "${type}", system: "${system}", near: "${near}"`);
+    
     // Generate unique ID for the intel item
     const id = `rift-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    console.log(`[Intel] Generated ID: ${id}`);
     
     const riftIntel: RiftIntelItem = {
       type,
@@ -112,12 +117,21 @@ class IntelCommandHandler implements IntelCommand {
       content: riftIntel
     };
     
-    await storeIntelItem(guildId, intelItem);
+    console.log(`[Intel] Created intel item:`, JSON.stringify(intelItem, null, 2));
+    
+    try {
+      await storeIntelItem(guildId, intelItem);
+      console.log(`[Intel] Successfully stored intel item ${id} for guild ${guildId}`);
+    } catch (error) {
+      console.error(`[Intel] Failed to store intel item ${id} for guild ${guildId}:`, error);
+      throw error;
+    }
     
     await this.sendSuccessResponse(
       interaction, 
       `Rift intel added: ${type} in ${system}${near ? ` near ${near}` : ''}`
     );
+    console.log(`[Intel] Sent success response for rift ${id}`);
   }
 
   /**
@@ -126,11 +140,23 @@ class IntelCommandHandler implements IntelCommand {
    * @param guildId - Guild ID
    */
   private async handleListSubcommand(interaction: ChatInputCommandInteraction, guildId: string): Promise<void> {
+    console.log(`[Intel] Starting list subcommand for guild ${guildId}`);
+    
     // Purge stale intel items and fetch current ones
-    await this.purgeStaleIntel(guildId);
+    console.log(`[Intel] Purging stale intel items...`);
+    const purgedCount = await this.purgeStaleIntel(guildId);
+    console.log(`[Intel] Purged ${purgedCount} stale intel items`);
+    
+    console.log(`[Intel] Fetching intel items...`);
     const items = await this.fetchIntel(guildId);
+    console.log(`[Intel] Found ${items.length} intel items:`, items.map(item => ({
+      id: item.intelItem.id,
+      timestamp: item.intelItem.timestamp,
+      type: item.intelItem.content
+    })));
     
     await this.sendIntelReport(interaction, items);
+    console.log(`[Intel] Sent intel report with ${items.length} items`);
   }
 
   /**
@@ -139,7 +165,10 @@ class IntelCommandHandler implements IntelCommand {
    * @returns Array of intel entities
    */
   private async fetchIntel(guildId: string): Promise<IntelEntity[]> {
-    return await repository.getAll(IntelEntity, guildId);
+    console.log(`[Intel] Repository.getAll for IntelEntity, guild ${guildId}`);
+    const result = await repository.getAll(IntelEntity, guildId);
+    console.log(`[Intel] Repository returned ${result.length} items`);
+    return result;
   }
 
   /**
@@ -148,7 +177,10 @@ class IntelCommandHandler implements IntelCommand {
    * @returns Number of items purged
    */
   private async purgeStaleIntel(guildId: string): Promise<number> {
-    return await repository.purgeStaleItems(IntelEntity, guildId, 24);
+    console.log(`[Intel] Repository.purgeStaleItems for IntelEntity, guild ${guildId}, maxAge 24 hours`);
+    const purgedCount = await repository.purgeStaleItems(IntelEntity, guildId, 24);
+    console.log(`[Intel] Purged ${purgedCount} stale items`);
+    return purgedCount;
   }
 
   /**
