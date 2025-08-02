@@ -121,13 +121,16 @@ describe('Intel Command', () => {
       user: { id: 'user123' },
       options: {
         getSubcommand: jest.fn(() => 'list'),
-        getString: jest.fn()
+        getString: jest.fn(),
+        getInteger: jest.fn(() => null) // Default timeout
       },
       reply: jest.fn()
     } as unknown as ChatInputCommandInteraction;
 
     beforeEach(() => {
-      (mockInteraction.reply as jest.Mock).mockResolvedValue(undefined);
+      // Create a spy that captures all arguments
+      const replyMock = jest.fn().mockResolvedValue(undefined);
+      (mockInteraction.reply as jest.Mock) = replyMock;
     });
 
     it('should handle list subcommand', async () => {
