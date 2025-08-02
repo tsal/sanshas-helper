@@ -31,6 +31,14 @@ class IntelCommandHandler implements IntelCommand {
       subcommand
         .setName('list')
         .setDescription('View current intelligence reports')
+        .addIntegerOption(option =>
+          option
+            .setName('timeout')
+            .setDescription('Minutes before the report expires (1-10, default: 5)')
+            .setRequired(false)
+            .setMinValue(1)
+            .setMaxValue(10)
+        )
     )
     .addSubcommand(subcommand =>
       subcommand
@@ -92,17 +100,12 @@ class IntelCommandHandler implements IntelCommand {
    * @param guildId - Guild ID
    */
   private async handleRiftSubcommand(interaction: ChatInputCommandInteraction, guildId: string): Promise<void> {
-    console.log(`[Intel] Starting rift subcommand for guild ${guildId}`);
-    
     const type = interaction.options.getString('type', true);
     const system = interaction.options.getString('system', true);
     const near = interaction.options.getString('near') || ''; // Default to empty string if not provided
     
-    console.log(`[Intel] Rift parameters - type: "${type}", system: "${system}", near: "${near}"`);
-    
     // Generate unique ID for the intel item
     const id = `rift-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    console.log(`[Intel] Generated ID: ${id}`);
     
     const riftIntel: RiftIntelItem = {
       type,
@@ -117,21 +120,35 @@ class IntelCommandHandler implements IntelCommand {
       content: riftIntel
     };
     
-    console.log(`[Intel] Created intel item:`, JSON.stringify(intelItem, null, 2));
-    
     try {
       await storeIntelItem(guildId, intelItem);
-      console.log(`[Intel] Successfully stored intel item ${id} for guild ${guildId}`);
     } catch (error) {
       console.error(`[Intel] Failed to store intel item ${id} for guild ${guildId}:`, error);
       throw error;
     }
-    
-    await this.sendSuccessResponse(
-      interaction, 
-      `Rift intel added: ${type} in ${system}${near ? ` near ${near}` : ''}`
-    );
-    console.log(`[Intel] Sent success response for rift ${id}`);
+
+    // Create an intel entity for the embed
+    const intelEntity = new IntelEntity(guildId, intelItem);
+
+    // Create embed for the newly added rift
+    const riftEmbed = this.createRiftIntelEmbed(intelEntity);
+
+    await interaction.reply({
+      content: getThemeMessage(MessageCategory.SUCCESS, `Rift intel added: ${type} in ${system}${near ? ` near ${near}` : ''}`).text,
+      embeds: [riftEmbed],
+      flags: MessageFlags.Ephemeral
+    });
+
+    // Set timer to delete the ephemeral message after 30 seconds (skip in test environment)
+    if (process.env.NODE_ENV !== 'test') {
+      setTimeout(async () => {
+        try {
+          await interaction.deleteReply();
+        } catch (error) {
+          console.error(`[Intel] Error auto-deleting ephemeral response for rift ${id}:`, error);
+        }
+      }, 30_000); // 30 seconds
+    }
   }
 
   /**
@@ -141,6 +158,9 @@ class IntelCommandHandler implements IntelCommand {
    */
   private async handleListSubcommand(interaction: ChatInputCommandInteraction, guildId: string): Promise<void> {
     console.log(`[Intel] Starting list subcommand for guild ${guildId}`);
+    
+    // Get timeout parameter (default to 5 minutes)
+    const timeoutMinutes = interaction.options.getInteger('timeout') || 5;
     
     // Purge stale intel items and fetch current ones
     console.log(`[Intel] Purging stale intel items...`);
@@ -155,7 +175,7 @@ class IntelCommandHandler implements IntelCommand {
       type: item.intelItem.content
     })));
     
-    await this.sendIntelReport(interaction, items);
+    await this.sendIntelReport(interaction, items, timeoutMinutes);
     console.log(`[Intel] Sent intel report with ${items.length} items`);
   }
 
@@ -254,10 +274,12 @@ class IntelCommandHandler implements IntelCommand {
    * Send intel report to user
    * @param interaction - Discord interaction
    * @param items - Intel items to display
+   * @param timeoutMinutes - Minutes before the report expires (optional)
    */
   private async sendIntelReport(
     interaction: ChatInputCommandInteraction, 
-    items: IntelEntity[]
+    items: IntelEntity[],
+    timeoutMinutes?: number
   ): Promise<void> {
     if (items.length === 0) {
       await interaction.reply({
@@ -284,16 +306,18 @@ class IntelCommandHandler implements IntelCommand {
       embeds: embeds,
       flags: MessageFlags.Ephemeral
     });
-  }
 
-  /**
-   * Send success response with proper theming
-   */
-  private async sendSuccessResponse(interaction: ChatInputCommandInteraction, message: string): Promise<void> {
-    await interaction.reply({
-      content: getThemeMessage(MessageCategory.SUCCESS, message).text,
-      flags: MessageFlags.Ephemeral
-    });
+    // Set timer to delete the ephemeral message (skip in test environment)
+    if (timeoutMinutes && process.env.NODE_ENV !== 'test') {
+      const timeoutMs = timeoutMinutes * 60 * 1000; // Convert minutes to milliseconds
+      setTimeout(async () => {
+        try {
+          await interaction.deleteReply();
+        } catch (error) {
+          console.error(`[Intel] Error auto-deleting intel report after ${timeoutMinutes} minutes:`, error);
+        }
+      }, timeoutMs);
+    }
   }
 
   /**
