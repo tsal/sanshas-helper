@@ -31,4 +31,33 @@ export interface Repository {
    * Store a collection in the database
    */
   storeCollection<T = any>(storageKey: string, collection: import('../types').DatabaseCollection<T>): Promise<void>;
+
+  /**
+   * Get all objects of a specific type for a guild
+   */
+  getAll<T extends import('../types').DatabaseObject>(
+    EntityClass: new (...args: any[]) => T,
+    guildId: string
+  ): Promise<T[]>;
+
+  /**
+   * Remove stale objects that implement Purgeable interface
+   * @param EntityClass - The entity class to purge
+   * @param guildId - Guild ID to purge from
+   * @param maxAgeHours - Maximum age in hours (default 24)
+   */
+  purgeStaleItems<T extends import('../types').DatabaseObject & import('../types').Purgeable>(
+    EntityClass: new (...args: any[]) => T,
+    guildId: string,
+    maxAgeHours?: number
+  ): Promise<number>;
+
+  /**
+   * Replace all objects of a specific type for a guild
+   */
+  replaceAll<T extends import('../types').DatabaseObject>(
+    EntityClass: new (...args: any[]) => T,
+    guildId: string,
+    objects: T[]
+  ): Promise<void>;
 }
