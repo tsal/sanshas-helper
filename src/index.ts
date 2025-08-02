@@ -111,6 +111,14 @@ client.once('ready', async (): Promise<void> => {
   console.log(`Bot ID: ${client.user.id}`);
   console.log(`Serving ${client.guilds.cache.size} guilds`);
   
+  // Log all guild IDs for reference
+  if (client.guilds.cache.size > 0) {
+    console.log('Connected to guilds:');
+    for (const guild of client.guilds.cache.values()) {
+      console.log(`  - ${guild.name} (ID: ${guild.id})`);
+    }
+  }
+  
   // Register slash commands
   await registerCommands(client.user.id);
   
@@ -128,11 +136,12 @@ client.once('ready', async (): Promise<void> => {
   // Check management roles in all existing guilds
   console.log('Setting up roles in existing guilds...');
   for (const guild of client.guilds.cache.values()) {
+    console.log(`Processing guild: ${guild.name} (ID: ${guild.id})`);
     try {
       const roles = await ensureAllRoles(guild);
-      console.log(`Successfully ensured ${roles.length} roles exist in guild: ${guild.name}`);
+      console.log(`Successfully ensured ${roles.length} roles exist in guild: ${guild.name} (ID: ${guild.id})`);
     } catch (error) {
-      console.error(`Failed to ensure roles in guild ${guild.name}:`, error);
+      console.error(`Failed to ensure roles in guild ${guild.name} (ID: ${guild.id}):`, error);
     }
   }
   console.log('Role setup complete.');
