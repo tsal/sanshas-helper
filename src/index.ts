@@ -2,6 +2,7 @@ import { Client, GatewayIntentBits, REST, Routes } from 'discord.js';
 import * as dotenv from 'dotenv';
 import { ensureAllRoles } from './discord';
 import { roleCommand } from './discord/roles';
+import { intelCommand } from './intel/command';
 import { getBotConfig } from './config';
 import { initializeThemes } from './themes';
 import { isDatabaseEnabled, repository, Version, getBotVersion } from './database';
@@ -37,14 +38,27 @@ const registerCommands = async (clientId: string): Promise<void> => {
   try {
     console.log('Started refreshing application (/) commands.');
     
-    const commands = [roleCommand.data.toJSON()];
+    // Global commands (role command)
+    const globalCommands = [roleCommand.data.toJSON()];
     
     await rest.put(
       Routes.applicationCommands(clientId),
-      { body: commands }
+      { body: globalCommands }
     );
     
-    console.log('Successfully reloaded application (/) commands.');
+    console.log('Successfully reloaded global application (/) commands.');
+    
+    // Guild-specific commands (intel command)
+    const guildId = '245179286535798784';
+    const guildCommands = [intelCommand.data.toJSON()];
+    
+    await rest.put(
+      Routes.applicationGuildCommands(clientId, guildId),
+      { body: guildCommands }
+    );
+    
+    console.log(`Successfully reloaded guild commands for guild ID: ${guildId}`);
+    
   } catch (error) {
     console.error('Error registering commands:', error);
   }
@@ -184,6 +198,8 @@ client.on('interactionCreate', async (interaction): Promise<void> => {
       const config = getBotConfig();
       if (interaction.commandName === config.rolesCommandName) {
         await roleCommand.execute(interaction);
+      } else if (interaction.commandName === 'intel') {
+        await intelCommand.execute(interaction);
       }
     }
     // Button interactions are now handled by InteractionCollector in roleCommand

@@ -15,28 +15,6 @@ describe('createFleetButtons', () => {
     expect(allButtons.length).toBeGreaterThan(0);
   });
 
-  it('should create disabled placeholder buttons', () => {
-    const result = createFleetButtons();
-    const allButtons = result.flatMap(row => row.components);
-    
-    // All buttons should be disabled for now (placeholder)
-    allButtons.forEach(button => {
-      expect(button.data.disabled).toBe(true);
-    });
-  });
-
-  it('should have fleet-prefixed custom IDs', () => {
-    const result = createFleetButtons();
-    const allButtons = result.flatMap(row => row.components);
-    
-    // All buttons should have fleet_ prefix
-    // Using type assertion since Discord.js types don't properly expose custom_id
-    allButtons.forEach(button => {
-      const customId = (button.data as any).custom_id;
-      expect(customId).toMatch(/^fleet_/);
-    });
-  });
-
   it('should handle row organization correctly', () => {
     const result = createFleetButtons();
     

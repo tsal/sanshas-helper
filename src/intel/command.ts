@@ -26,7 +26,7 @@ class IntelCommandHandler implements IntelCommand {
    */
   public readonly data = new SlashCommandBuilder()
     .setName('intel')
-    .setDescription('🕵️ Manage intelligence reports')
+    .setDescription('🕵️ View current intelligence reports')
     .addSubcommand(subcommand =>
       subcommand
         .setName('rift')
@@ -49,11 +49,6 @@ class IntelCommandHandler implements IntelCommand {
             .setDescription('What the rift is near (e.g., P1L4)')
             .setRequired(false)
         )
-    )
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('list')
-        .setDescription('View current intelligence reports')
     );
 
   /**
@@ -68,17 +63,13 @@ class IntelCommandHandler implements IntelCommand {
         return;
       }
 
-      const subcommand = interaction.options.getSubcommand();
+      const subcommand = interaction.options.getSubcommand(false);
       
-      switch (subcommand) {
-        case 'rift':
-          await this.handleRiftSubcommand(interaction, guildId);
-          break;
-        case 'list':
-          await this.handleListSubcommand(interaction, guildId);
-          break;
-        default:
-          await this.sendErrorResponse(interaction, 'Unknown subcommand.');
+      if (subcommand === 'rift') {
+        await this.handleRiftSubcommand(interaction, guildId);
+      } else {
+        // Default behavior: show intel list
+        await this.handleListSubcommand(interaction, guildId);
       }
     } catch (error) {
       console.error('Intel command execution failed:', error);
