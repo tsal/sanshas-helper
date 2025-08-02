@@ -157,26 +157,14 @@ class IntelCommandHandler implements IntelCommand {
    * @param guildId - Guild ID
    */
   private async handleListSubcommand(interaction: ChatInputCommandInteraction, guildId: string): Promise<void> {
-    console.log(`[Intel] Starting list subcommand for guild ${guildId}`);
-    
     // Get timeout parameter (default to 5 minutes)
     const timeoutMinutes = interaction.options.getInteger('timeout') || 5;
     
     // Purge stale intel items and fetch current ones
-    console.log(`[Intel] Purging stale intel items...`);
-    const purgedCount = await this.purgeStaleIntel(guildId);
-    console.log(`[Intel] Purged ${purgedCount} stale intel items`);
-    
-    console.log(`[Intel] Fetching intel items...`);
+    await this.purgeStaleIntel(guildId);
     const items = await this.fetchIntel(guildId);
-    console.log(`[Intel] Found ${items.length} intel items:`, items.map(item => ({
-      id: item.intelItem.id,
-      timestamp: item.intelItem.timestamp,
-      type: item.intelItem.content
-    })));
     
     await this.sendIntelReport(interaction, items, timeoutMinutes);
-    console.log(`[Intel] Sent intel report with ${items.length} items`);
   }
 
   /**
@@ -185,9 +173,7 @@ class IntelCommandHandler implements IntelCommand {
    * @returns Array of intel entities
    */
   private async fetchIntel(guildId: string): Promise<IntelEntity[]> {
-    console.log(`[Intel] Repository.getAll for IntelEntity, guild ${guildId}`);
     const result = await repository.getAll(IntelEntity, guildId);
-    console.log(`[Intel] Repository returned ${result.length} items`);
     return result;
   }
 
@@ -197,9 +183,7 @@ class IntelCommandHandler implements IntelCommand {
    * @returns Number of items purged
    */
   private async purgeStaleIntel(guildId: string): Promise<number> {
-    console.log(`[Intel] Repository.purgeStaleItems for IntelEntity, guild ${guildId}, maxAge 24 hours`);
     const purgedCount = await repository.purgeStaleItems(IntelEntity, guildId, 24);
-    console.log(`[Intel] Purged ${purgedCount} stale items`);
     return purgedCount;
   }
 
