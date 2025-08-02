@@ -1,75 +1,28 @@
-/**
- * Base interface that all intel content must implement
- * Keeps things consistent but flexible, ya know?
- */
+import { DatabaseEntity, Purgeable } from '../database/types';
+import { repository } from '../database/repository';
+
+// Base interface for intel content
 export interface IntelContentType {
-  // Intentionally minimal - let specific types add their own fields
+  // Minimal - extend as needed
 }
 
-/**
- * Import DatabaseEntity for the wrapper class
- */
-import { DatabaseEntity } from '../database/types';
-
-/**
- * Rift intelligence content for tracking spatial anomalies
- * Represents rifts and their locations in the galaxy
- */
+// Rift intel: name, system, lagrange point (e.g. P1L4, P1M2)
 export interface RiftIntelItem extends IntelContentType {
-  /**
-   * Type/name of the rift (e.g., "Unstable Wormhole", "Quantum Anomaly")
-   */
   name: string;
-  
-  /**
-   * The stellar system where this rift is located
-   */
   systemName: string;
-  
-  /**
-   * Lagrange point designation within the system
-   * Examples: "P1L4" (Planet 1, Lagrange Point 4), "P1M2" (Planet 1, Moon Point 2)
-   * Can be any string - customer's always right about their naming conventions
-   */
-  lPointName: string;
+  lPointName: string; // P1L4 = Planet 1, L-Point 4
 }
 
-/**
- * Basic intel item interface for EVE Frontier intelligence reports
- * This is a minimal foundation that can be extended and iterated upon
- */
+// Intel item: ID, timestamp, reporter, content, optional location
 export interface IntelItem {
-  /**
-   * Unique identifier for this intel item
-   */
   id: string;
-  
-  /**
-   * ISO timestamp when the intel was reported
-   */
-  timestamp: string;
-  
-  /**
-   * Discord user ID of the person who reported this intel
-   */
-  reporter: string;
-  
-  /**
-   * The actual intel content/data - must implement IntelContentType
-   */
+  timestamp: string; // ISO format
+  reporter: string; // Discord user ID
   content: IntelContentType;
-  
-  /**
-   * Optional system or location reference
-   */
   location?: string;
 }
 
-/**
- * Type guard to check if a value is a valid IntelItem
- * @param value - The value to check
- * @returns True if the value is a valid IntelItem
- */
+// Type guard for IntelItem validation
 export const isIntelItem = (value: unknown): value is IntelItem => {
   if (typeof value !== 'object' || value === null) {
     return false;
@@ -102,47 +55,27 @@ export const isIntelItem = (value: unknown): value is IntelItem => {
   return true;
 };
 
-/**
- * Database entity wrapper for storing IntelItem objects
- * Extends DatabaseEntity to work with the existing database infrastructure
- */
-export class IntelEntity extends DatabaseEntity {
+// Database wrapper for IntelItem storage
+export class IntelEntity extends DatabaseEntity implements Purgeable {
   static readonly storageKey = 'intel-items';
-  
-  /**
-   * The wrapped intel item data
-   */
   public readonly intelItem: IntelItem;
   
-  /**
-   * Creates a new IntelEntity wrapper for database storage
-   * @param guildId - The Discord guild ID
-   * @param intelItem - The intel item to wrap and store
-   */
   constructor(guildId: string, intelItem: IntelItem) {
     super(guildId);
     this.intelItem = intelItem;
   }
+  
+  // Purgeable interface implementation
+  get timestamp(): string {
+    return this.intelItem.timestamp;
+  }
 }
 
-/**
- * Import repository for utility functions
- */
-import { repository } from '../database/repository';
-
-/**
- * Stores an intel item in the database for a specific guild
- * @param guildId - The Discord guild ID
- * @param intelItem - The intel item to store
- * @returns Promise that resolves when the item is stored
- */
+// Store intel item in database
 export const storeIntelItem = async (guildId: string, intelItem: IntelItem): Promise<void> => {
   const entity = new IntelEntity(guildId, intelItem);
   await repository.store(entity);
 };
 
-/**
- * Type for intel item retrieval (placeholder for future implementation)
- * When we need to retrieve items, we'll implement this function
- */
+// Type for future retrieval function
 export type GetIntelItemsFunction = (guildId: string) => Promise<IntelItem[]>;

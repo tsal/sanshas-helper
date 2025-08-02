@@ -21,5 +21,9 @@ module.exports = {
     '!src/**/__tests__/**'
   ],
   coverageDirectory: 'coverage',
-  coverageReporters: ['text', 'lcov', 'html']
+  coverageReporters: ['text', 'lcov', 'html'],
+  silent: true,
+  maxWorkers: 1,
+  cache: true,
+  testTimeout: 5000
 };
