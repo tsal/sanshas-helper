@@ -30,6 +30,11 @@ const ROLES_COMMAND_NAME_ENV_KEY = 'ROLES_COMMAND_NAME';
 const DATABASE_PATH_ENV_KEY = 'DATABASE_PATH';
 
 /**
+ * Environment variable key for configuring default intel expiration hours
+ */
+const DEFAULT_INTEL_EXPIRATION_ENV_KEY = 'DEFAULT_INTEL_EXPIRATION';
+
+/**
  * Interface for bot configuration
  */
 export interface BotConfig {
@@ -49,6 +54,10 @@ export interface BotConfig {
    * The path to the database file, null if database is disabled
    */
   databasePath: string | null;
+  /**
+   * Default expiration time for intel items in hours
+   */
+  defaultIntelExpiration: number;
 }
 
 /**
@@ -118,6 +127,30 @@ const parseDatabasePath = (): string | null => {
 };
 
 /**
+ * Parses the DEFAULT_INTEL_EXPIRATION environment variable
+ * @returns Default intel expiration time in hours, defaulting to 24
+ */
+const parseDefaultIntelExpiration = (): number => {
+  const envValue = process.env[DEFAULT_INTEL_EXPIRATION_ENV_KEY];
+  
+  // If not set, default to 24 hours
+  if (envValue === undefined) {
+    return 24;
+  }
+  
+  // Parse as integer
+  const parsedValue = parseInt(envValue.trim(), 10);
+  
+  // If not a valid number or negative, fall back to 24
+  if (isNaN(parsedValue) || parsedValue < 0) {
+    console.warn(`⚠️ Invalid DEFAULT_INTEL_EXPIRATION value: "${envValue}". Must be a non-negative number. Falling back to 24 hours.`);
+    return 24;
+  }
+  
+  return parsedValue;
+};
+
+/**
  * Parses the TRIBE_ROLES environment variable
  * @returns Array of valid FrontierRole values
  */
@@ -168,15 +201,17 @@ export const getBotConfig = (): BotConfig => {
   const responseTheme = parseResponseTheme();
   const rolesCommandName = parseRolesCommandName();
   const databasePath = parseDatabasePath();
+  const defaultIntelExpiration = parseDefaultIntelExpiration();
   
   // Log configuration summary at startup
   const databaseStatus = databasePath ? `enabled (${databasePath})` : 'disabled';
-  console.log(`Bot Configuration: Theme=${responseTheme}, Command=${rolesCommandName}, Database=${databaseStatus}, Roles=[${availableRoles.join(', ')}]`);
+  console.log(`Bot Configuration: Theme=${responseTheme}, Command=${rolesCommandName}, Database=${databaseStatus}, Intel Expiration=${defaultIntelExpiration}h, Roles=[${availableRoles.join(', ')}]`);
   
   return {
     availableRoles,
     responseTheme,
     rolesCommandName,
-    databasePath
+    databasePath,
+    defaultIntelExpiration
   };
 };

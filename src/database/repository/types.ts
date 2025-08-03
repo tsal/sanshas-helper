@@ -60,4 +60,17 @@ export interface Repository {
     guildId: string,
     objects: T[]
   ): Promise<void>;
+
+  /**
+   * Delete a specific object by ID for a guild
+   * @param EntityClass - The entity class to delete from
+   * @param guildId - Guild ID to delete from
+   * @param id - The ID of the object to delete
+   * @returns True if item was found and deleted, false if not found
+   */
+  deleteById<T extends import('../types').DatabaseObject>(
+    EntityClass: new (...args: any[]) => T,
+    guildId: string,
+    id: string
+  ): Promise<boolean>;
 }
