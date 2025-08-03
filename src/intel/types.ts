@@ -27,6 +27,27 @@ export const isRiftIntelItem = (content: unknown): content is RiftIntelItem => {
          typeof obj.near === 'string';
 };
 
+// Ore intel: ore type, name, system, near location
+export interface OreIntelItem extends IntelContentType {
+  oreType: string;
+  name: string;
+  systemName: string;
+  near: string;
+}
+
+// Type guard for OreIntelItem validation
+export const isOreIntelItem = (content: unknown): content is OreIntelItem => {
+  if (typeof content !== 'object' || content === null) {
+    return false;
+  }
+  
+  const obj = content as Record<string, unknown>;
+  return typeof obj.oreType === 'string' && 
+         typeof obj.name === 'string' &&
+         typeof obj.systemName === 'string' && 
+         typeof obj.near === 'string';
+};
+
 // Intel item: ID, timestamp, reporter, content, optional location
 export interface IntelItem {
   id: string;
