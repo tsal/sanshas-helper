@@ -64,6 +64,36 @@ describe('Intel Command', () => {
       expect(hasSystem).toBe(true);
       expect(hasNear).toBe(true);
     });
+
+    it('should have list subcommand with pages parameter', () => {
+      const commandData = intelCommand.data.toJSON();
+      
+      // Find the list subcommand
+      const listSubcommand = commandData.options?.find(
+        (option: any) => option.name === 'list'
+      );
+      
+      expect(listSubcommand).toBeDefined();
+      expect(listSubcommand?.description).toBe('View current intelligence reports');
+      
+      // Verify list subcommand has the expected options
+      const listOptions = (listSubcommand as any)?.options || [];
+      expect(listOptions.length).toBe(2); // timeout and pages
+      
+      const timeoutOption = listOptions.find((opt: any) => opt.name === 'timeout');
+      const pagesOption = listOptions.find((opt: any) => opt.name === 'pages');
+      
+      expect(timeoutOption).toBeDefined();
+      expect(timeoutOption?.required).toBe(false);
+      expect(timeoutOption?.min_value).toBe(1);
+      expect(timeoutOption?.max_value).toBe(10);
+      
+      expect(pagesOption).toBeDefined();
+      expect(pagesOption?.description).toBe('Number of pages to display (1-10, default: 1)');
+      expect(pagesOption?.required).toBe(false);
+      expect(pagesOption?.min_value).toBe(1);
+      expect(pagesOption?.max_value).toBe(10);
+    });
   });
 
   describe('Rift Subcommand Execution', () => {
@@ -177,6 +207,47 @@ describe('Intel Command', () => {
           flags: expect.any(Number)
         })
       );
+    });
+
+    it('should extract pages parameter in list subcommand', async () => {
+      // Mock getInteger to return different values for timeout and pages
+      (mockInteraction.options.getInteger as jest.Mock)
+        .mockReturnValueOnce(7)  // timeout
+        .mockReturnValueOnce(3); // pages
+
+      await intelCommand.execute(mockInteraction);
+
+      // Verify getInteger was called for both parameters
+      expect(mockInteraction.options.getInteger).toHaveBeenCalledWith('timeout');
+      expect(mockInteraction.options.getInteger).toHaveBeenCalledWith('pages');
+    });
+
+    it('should handle pagination logic correctly', async () => {
+      // Mock interaction with followUp method
+      const mockFollowUp = jest.fn().mockResolvedValue({});
+      const paginationInteraction = {
+        ...mockInteraction,
+        followUp: mockFollowUp
+      } as unknown as ChatInputCommandInteraction;
+
+      // Mock getInteger to return pages = 2
+      (paginationInteraction.options.getInteger as jest.Mock)
+        .mockReturnValueOnce(5)  // timeout
+        .mockReturnValueOnce(2); // pages
+
+      await intelCommand.execute(paginationInteraction);
+
+      // Should call reply for first page
+      expect(paginationInteraction.reply).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: 'Test message',
+          embeds: [],
+          flags: expect.any(Number)
+        })
+      );
+
+      // With empty intel items, should not call followUp
+      expect(mockFollowUp).not.toHaveBeenCalled();
     });
   });
 

@@ -39,6 +39,14 @@ class IntelCommandHandler implements IntelCommand {
             .setMinValue(1)
             .setMaxValue(10)
         )
+        .addIntegerOption(option =>
+          option
+            .setName('pages')
+            .setDescription('Number of pages to display (1-10, default: 1)')
+            .setRequired(false)
+            .setMinValue(1)
+            .setMaxValue(10)
+        )
     )
     .addSubcommand(subcommand =>
       subcommand
@@ -295,12 +303,14 @@ class IntelCommandHandler implements IntelCommand {
   private async handleListSubcommand(interaction: ChatInputCommandInteraction, guildId: string): Promise<void> {
     // Get timeout parameter (default to 5 minutes)
     const timeoutMinutes = interaction.options.getInteger('timeout') || 5;
+    // Get pages parameter (default to 1 page)
+    const pages = interaction.options.getInteger('pages') || 1;
     
     // Purge stale intel items and fetch current ones
     await this.purgeStaleIntel(guildId);
     const items = await this.fetchIntel(guildId);
     
-    await this.sendIntelReport(interaction, items, timeoutMinutes);
+    await this.sendIntelReport(interaction, items, timeoutMinutes, pages);
   }
 
   /**
@@ -428,11 +438,13 @@ class IntelCommandHandler implements IntelCommand {
    * @param interaction - Discord interaction
    * @param items - Intel items to display
    * @param timeoutMinutes - Minutes before the report expires (optional)
+   * @param pages - Number of pages to display (optional, default: 1)
    */
   private async sendIntelReport(
     interaction: ChatInputCommandInteraction, 
     items: IntelEntity[],
-    timeoutMinutes?: number
+    timeoutMinutes?: number,
+    pages?: number
   ): Promise<void> {
     if (items.length === 0) {
       await interaction.reply({
@@ -448,24 +460,57 @@ class IntelCommandHandler implements IntelCommand {
       new Date(b.intelItem.timestamp).getTime() - new Date(a.intelItem.timestamp).getTime()
     );
     
+    // Default to 1 page if not specified
+    const requestedPages = pages || 1;
+    
     // Discord allows up to 10 embeds per message
     const maxEmbeds = 10;
-    const embeds = sortedItems.slice(0, maxEmbeds).map(item => this.createIntelEmbed(item));
+    const totalPages = Math.ceil(sortedItems.length / maxEmbeds);
+    const actualPages = Math.min(requestedPages, totalPages);
     
-    const summary = `Found ${items.length} intel item${items.length === 1 ? '' : 's'}${items.length > maxEmbeds ? ` (showing first ${maxEmbeds})` : ''}.`;
+    // Create messages for each page
+    const messagePromises: Promise<void>[] = [];
     
-    await interaction.reply({
-      content: getThemeMessage(MessageCategory.SUCCESS, summary).text,
-      embeds: embeds,
-      flags: MessageFlags.Ephemeral
-    });
+    for (let pageIndex = 0; pageIndex < actualPages; pageIndex++) {
+      const startIndex = pageIndex * maxEmbeds;
+      const endIndex = Math.min(startIndex + maxEmbeds, sortedItems.length);
+      const pageItems = sortedItems.slice(startIndex, endIndex);
+      const embeds = pageItems.map(item => this.createIntelEmbed(item));
+      
+      const pageInfo = actualPages > 1 ? ` (Page ${pageIndex + 1}/${actualPages})` : '';
+      const summary = `Found ${sortedItems.length} intel item${sortedItems.length === 1 ? '' : 's'}${pageInfo}.`;
+      
+      if (pageIndex === 0) {
+        // First page uses reply()
+        messagePromises.push(
+          interaction.reply({
+            content: getThemeMessage(MessageCategory.SUCCESS, summary).text,
+            embeds: embeds,
+            flags: MessageFlags.Ephemeral
+          }).then(() => {})
+        );
+      } else {
+        // Additional pages use followUp()
+        messagePromises.push(
+          interaction.followUp({
+            content: getThemeMessage(MessageCategory.SUCCESS, summary).text,
+            embeds: embeds,
+            flags: MessageFlags.Ephemeral
+          }).then(() => {})
+        );
+      }
+    }
+    
+    // Wait for all messages to be sent
+    await Promise.all(messagePromises);
 
-    // Set timer to delete the ephemeral message (skip in test environment)
+    // Set timer to delete all ephemeral messages (skip in test environment)
     if (timeoutMinutes && process.env.NODE_ENV !== 'test') {
       const timeoutMs = timeoutMinutes * 60 * 1000; // Convert minutes to milliseconds
       setTimeout(async () => {
         try {
           await interaction.deleteReply();
+          // Note: followUp messages auto-delete with the main reply when ephemeral
         } catch (error) {
           console.error(`[Intel] Error auto-deleting intel report after ${timeoutMinutes} minutes:`, error);
         }
