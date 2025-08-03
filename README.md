@@ -39,7 +39,6 @@ DISCORD_TOKEN=your_bot_token
 # Optional configurations
 TRIBE_ROLES=Exploration,PVP,Mining     # Limit available roles
 RESPONSE_THEME=kuvakei                 # Message theme: kuvakei|triglav  
-ROLES_COMMAND_NAME=eve-roles           # Slash command name
 ```
 
 ### Discord Setup
@@ -65,7 +64,7 @@ Store and manage EVE Frontier systems intelligence with a set of management comm
 
 ## Commands
 
-- Default: `/eve-roles` (configurable via `ROLES_COMMAND_NAME`)
+- `/eve-roles` (Manage your roles for notifications and call outs)
 - `/intel` (Manage intelligence reports for rift and ore sites)
 
 #### `/intel` Command
