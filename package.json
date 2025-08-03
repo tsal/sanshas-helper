@@ -1,6 +1,6 @@
 {
   "name": "sanshas-helper",
-  "version": "0.0.5",
+  "version": "0.1.0",
   "description": "Discord bot focused on EVE Frontier",
   "main": "dist/index.js",
   "scripts": {
