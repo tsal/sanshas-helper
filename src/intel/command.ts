@@ -3,7 +3,9 @@ import {
   ChatInputCommandInteraction,
   MessageFlags,
   EmbedBuilder,
-  SlashCommandSubcommandsOnlyBuilder 
+  SlashCommandSubcommandsOnlyBuilder,
+  Message,
+  InteractionResponse
 } from 'discord.js';
 import { getThemeMessage, MessageCategory } from '../themes';
 import { IntelEntity, RiftIntelItem, isRiftIntelItem, OreIntelItem, isOreIntelItem, IntelItem, storeIntelItem, deleteIntelByIdFromInteraction } from './types';
@@ -468,8 +470,8 @@ class IntelCommandHandler implements IntelCommand {
     const totalPages = Math.ceil(sortedItems.length / maxEmbeds);
     const actualPages = Math.min(requestedPages, totalPages);
     
-    // Create messages for each page
-    const messagePromises: Promise<void>[] = [];
+    // Create messages for each page and collect message responses
+    const messagePromises: Array<Promise<Message | InteractionResponse>> = [];
     
     for (let pageIndex = 0; pageIndex < actualPages; pageIndex++) {
       const startIndex = pageIndex * maxEmbeds;
@@ -487,7 +489,7 @@ class IntelCommandHandler implements IntelCommand {
             content: getThemeMessage(MessageCategory.SUCCESS, summary).text,
             embeds: embeds,
             flags: MessageFlags.Ephemeral
-          }).then(() => {})
+          })
         );
       } else {
         // Additional pages use followUp()
@@ -496,23 +498,35 @@ class IntelCommandHandler implements IntelCommand {
             content: getThemeMessage(MessageCategory.SUCCESS, summary).text,
             embeds: embeds,
             flags: MessageFlags.Ephemeral
-          }).then(() => {})
+          })
         );
       }
     }
     
-    // Wait for all messages to be sent
-    await Promise.all(messagePromises);
+    // Wait for all messages to be sent and collect message objects
+    const sentMessages = await Promise.all(messagePromises);
 
     // Set timer to delete all ephemeral messages (skip in test environment)
     if (timeoutMinutes && process.env.NODE_ENV !== 'test') {
       const timeoutMs = timeoutMinutes * 60 * 1000; // Convert minutes to milliseconds
       setTimeout(async () => {
-        try {
-          await interaction.deleteReply();
-          // Note: followUp messages auto-delete with the main reply when ephemeral
-        } catch (error) {
-          console.error(`[Intel] Error auto-deleting intel report after ${timeoutMinutes} minutes:`, error);
+        // Delete each message individually with graceful error handling
+        for (let i = 0; i < sentMessages.length; i++) {
+          try {
+            const message = sentMessages[i];
+            if ('delete' in message) {
+              // This is a Message from followUp()
+              await message.delete();
+            } else {
+              // This is an InteractionResponse from reply() - use interaction.deleteReply()
+              if (i === 0) {
+                await interaction.deleteReply();
+              }
+            }
+          } catch (error) {
+            console.error(`[Intel] Error auto-deleting message ${i + 1}/${sentMessages.length} after ${timeoutMinutes} minutes:`, error);
+            // Continue to next message even if this one fails
+          }
         }
       }, timeoutMs);
     }
