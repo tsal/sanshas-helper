@@ -6,7 +6,7 @@ import {
   SlashCommandSubcommandsOnlyBuilder 
 } from 'discord.js';
 import { getThemeMessage, MessageCategory } from '../themes';
-import { IntelEntity, RiftIntelItem, isRiftIntelItem, IntelItem, storeIntelItem } from './types';
+import { IntelEntity, RiftIntelItem, isRiftIntelItem, IntelItem, storeIntelItem, deleteIntelByIdFromInteraction } from './types';
 import { repository } from '../database/repository';
 
 /**
@@ -62,6 +62,23 @@ class IntelCommandHandler implements IntelCommand {
             .setDescription('What the rift is near (e.g., P1L4)')
             .setRequired(false)
         )
+    )
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('del')
+        .setDescription('Delete an intel report')
+        .addStringOption(option =>
+          option
+            .setName('type')
+            .setDescription('Intel type (e.g., rift)')
+            .setRequired(true)
+        )
+        .addStringOption(option =>
+          option
+            .setName('id')
+            .setDescription('Intel item ID to delete')
+            .setRequired(true)
+        )
     );
 
   /**
@@ -85,6 +102,9 @@ class IntelCommandHandler implements IntelCommand {
         case 'rift':
           await this.handleRiftSubcommand(interaction, guildId);
           break;
+        case 'del':
+          await this.handleDelSubcommand(interaction, guildId);
+          break;
         default:
           await this.sendErrorResponse(interaction, 'Unknown subcommand.');
       }
@@ -92,6 +112,31 @@ class IntelCommandHandler implements IntelCommand {
       console.error('Intel command execution failed:', error);
       await this.sendErrorResponse(interaction, 'Command execution failed.');
     }
+  }
+
+  /**
+   * Handle del subcommand - deletes an intel item by type and ID
+   * @param interaction - Discord interaction object
+   * @param guildId - Guild ID
+   */
+  private async handleDelSubcommand(interaction: ChatInputCommandInteraction, guildId: string): Promise<void> {
+    const type = interaction.options.getString('type', true);
+    const id = interaction.options.getString('id', true);
+
+    // Handle supported type: rift
+    if (type === 'rift') {
+      try {
+        await deleteIntelByIdFromInteraction(interaction, guildId, id);
+        return;
+      } catch (error) {
+        console.error(`[Intel] Failed to delete rift intel ${id}:`, error);
+        await this.sendErrorResponse(interaction, 'Failed to delete intel item.');
+        return;
+      }
+    }
+
+    // If we reach here, the type is unknown/untracked
+    await this.sendErrorResponse(interaction, `Unknown or untracked intel type: ${type}`);
   }
 
   /**

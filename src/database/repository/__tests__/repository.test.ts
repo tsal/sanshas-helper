@@ -574,4 +574,55 @@ describe('Repository Integration Tests', () => {
       });
     });
   });
+
+  describe('deleteById', () => {
+    beforeEach(async () => {
+      mockJSONFilePreset.mockResolvedValue(mockDbInstance);
+      await repository.initialize({ databasePath: testDatabasePath });
+    });
+
+    it('should delete an existing intel item by ID', async () => {
+      const intelItem = {
+        id: 'rift-1234567890-abc123',
+        timestamp: new Date().toISOString(),
+        reporter: 'user123',
+        content: { type: 'Test Rift', systemName: 'Test System', near: 'P1L4' }
+      };
+      const entity = new IntelEntity(testGuildId, intelItem);
+
+      // Store the item first
+      mockDbInstance.data = {
+        [testGuildId]: {
+          [IntelEntity.storageKey]: [entity]
+        }
+      };
+
+      const result = await repository.deleteById(IntelEntity, testGuildId, 'rift-1234567890-abc123');
+
+      expect(result).toBe(true);
+      expect(mockDbInstance.data[testGuildId][IntelEntity.storageKey]).toEqual([]);
+      expect(mockWrite).toHaveBeenCalled();
+    });
+
+    it('should return false when item does not exist', async () => {
+      mockDbInstance.data = {
+        [testGuildId]: {
+          [IntelEntity.storageKey]: []
+        }
+      };
+
+      const result = await repository.deleteById(IntelEntity, testGuildId, 'nonexistent-id');
+
+      expect(result).toBe(false);
+      expect(mockWrite).not.toHaveBeenCalled();
+    });
+
+    it('should return false when repository is not initialized', async () => {
+      const uninitializedRepo = new (repository.constructor as any)();
+      
+      const result = await uninitializedRepo.deleteById(IntelEntity, testGuildId, 'test-id');
+      
+      expect(result).toBe(false);
+    });
+  });
 });

@@ -1,5 +1,7 @@
 import { DatabaseEntity, Purgeable } from '../database/types';
 import { repository } from '../database/repository';
+import { getThemeMessage, MessageCategory } from '../themes';
+import { ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 
 // Base interface for intel content
 export interface IntelContentType {
@@ -91,3 +93,33 @@ export const storeIntelItem = async (guildId: string, intelItem: IntelItem): Pro
 
 // Type for future retrieval function
 export type GetIntelItemsFunction = (guildId: string) => Promise<IntelItem[]>;
+
+/**
+ * Delete an intel item by ID from a Discord interaction
+ * @param interaction - Discord interaction object
+ * @param guildId - Guild ID
+ * @param id - Intel item ID to delete
+ * @throws Error if deletion fails
+ */
+export const deleteIntelByIdFromInteraction = async (
+  interaction: ChatInputCommandInteraction, 
+  guildId: string, 
+  id: string
+): Promise<void> => {
+  const deleted = await repository.deleteById(IntelEntity, guildId, id);
+  
+  if (!deleted) {
+    const errorMessage = getThemeMessage(MessageCategory.ERROR, `Intel item not found: ${id}`);
+    await interaction.reply({
+      content: errorMessage.text,
+      flags: MessageFlags.Ephemeral
+    });
+    return;
+  }
+  
+  const successMessage = getThemeMessage(MessageCategory.SUCCESS, `Intel item deleted: ${id}`);
+  await interaction.reply({
+    content: successMessage.text,
+    flags: MessageFlags.Ephemeral
+  });
+};

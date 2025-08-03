@@ -290,6 +290,52 @@ class DatabaseRepository implements Repository {
       throw error;
     }
   }
+
+  /**
+   * Delete a specific object by ID for a guild
+   * @param EntityClass - The entity class to delete from
+   * @param guildId - Guild ID to delete from
+   * @param id - The ID of the object to delete
+   * @returns True if item was found and deleted, false if not found
+   */
+  async deleteById<T extends DatabaseObject>(
+    EntityClass: new (...args: any[]) => T,
+    guildId: string,
+    id: string
+  ): Promise<boolean> {
+    if (!this.isInitialized()) {
+      return false;
+    }
+
+    try {
+      // Get all items for this entity type and guild
+      const allItems = await this.getAll(EntityClass, guildId);
+      
+      // Find the item to delete
+      const itemIndex = allItems.findIndex((item: any) => {
+        // For IntelEntity, check the intelItem.id property
+        if ('intelItem' in item && item.intelItem && typeof item.intelItem === 'object') {
+          return (item.intelItem as any).id === id;
+        }
+        // For other entities, check the id property directly
+        return (item as any).id === id;
+      });
+
+      // If item not found, return false
+      if (itemIndex === -1) {
+        return false;
+      }
+
+      // Remove the item and replace all
+      const updatedItems = allItems.filter((_, index) => index !== itemIndex);
+      await this.replaceAll(EntityClass, guildId, updatedItems);
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to delete item by ID:', error);
+      throw error;
+    }
+  }
 }
 
 /**
