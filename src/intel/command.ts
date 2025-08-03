@@ -6,7 +6,7 @@ import {
   SlashCommandSubcommandsOnlyBuilder 
 } from 'discord.js';
 import { getThemeMessage, MessageCategory } from '../themes';
-import { IntelEntity, RiftIntelItem, isRiftIntelItem, IntelItem, storeIntelItem, deleteIntelByIdFromInteraction } from './types';
+import { IntelEntity, RiftIntelItem, isRiftIntelItem, OreIntelItem, isOreIntelItem, IntelItem, storeIntelItem, deleteIntelByIdFromInteraction } from './types';
 import { repository } from '../database/repository';
 
 /**
@@ -65,6 +65,35 @@ class IntelCommandHandler implements IntelCommand {
     )
     .addSubcommand(subcommand =>
       subcommand
+        .setName('ore')
+        .setDescription('Add an ore site intel report')
+        .addStringOption(option =>
+          option
+            .setName('oretype')
+            .setDescription('Type of ore resource (e.g., carbon, metal, common)')
+            .setRequired(true)
+        )
+        .addStringOption(option =>
+          option
+            .setName('name')
+            .setDescription('Name of the ore site (e.g., Carbon Debris Cluster)')
+            .setRequired(true)
+        )
+        .addStringOption(option =>
+          option
+            .setName('system')
+            .setDescription('System name where the ore site is located')
+            .setRequired(true)
+        )
+        .addStringOption(option =>
+          option
+            .setName('near')
+            .setDescription('What the ore site is near (e.g., P1L4)')
+            .setRequired(false)
+        )
+    )
+    .addSubcommand(subcommand =>
+      subcommand
         .setName('del')
         .setDescription('Delete an intel report')
         .addStringOption(option =>
@@ -102,6 +131,9 @@ class IntelCommandHandler implements IntelCommand {
         case 'rift':
           await this.handleRiftSubcommand(interaction, guildId);
           break;
+        case 'ore':
+          await this.handleOreSubcommand(interaction, guildId);
+          break;
         case 'del':
           await this.handleDelSubcommand(interaction, guildId);
           break;
@@ -123,13 +155,13 @@ class IntelCommandHandler implements IntelCommand {
     const type = interaction.options.getString('type', true);
     const id = interaction.options.getString('id', true);
 
-    // Handle supported type: rift
-    if (type === 'rift') {
+    // Handle supported types: rift and ore
+    if (type === 'rift' || type === 'ore') {
       try {
         await deleteIntelByIdFromInteraction(interaction, guildId, id);
         return;
       } catch (error) {
-        console.error(`[Intel] Failed to delete rift intel ${id}:`, error);
+        console.error(`[Intel] Failed to delete ${type} intel ${id}:`, error);
         await this.sendErrorResponse(interaction, 'Failed to delete intel item.');
         return;
       }
@@ -197,6 +229,65 @@ class IntelCommandHandler implements IntelCommand {
   }
 
   /**
+   * Handle ore subcommand - adds a new ore site intel item
+   * @param interaction - Discord interaction object
+   * @param guildId - Guild ID
+   */
+  private async handleOreSubcommand(interaction: ChatInputCommandInteraction, guildId: string): Promise<void> {
+    const oreType = interaction.options.getString('oretype', true);
+    const name = interaction.options.getString('name', true);
+    const system = interaction.options.getString('system', true);
+    const near = interaction.options.getString('near') || ''; // Default to empty string if not provided
+    
+    // Generate unique ID for the intel item
+    const id = `ore-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    const oreIntel: OreIntelItem = {
+      oreType,
+      name,
+      systemName: system,
+      near
+    };
+    
+    const intelItem: IntelItem = {
+      id,
+      timestamp: new Date().toISOString(),
+      reporter: interaction.user.id,
+      content: oreIntel
+    };
+    
+    try {
+      await storeIntelItem(guildId, intelItem);
+    } catch (error) {
+      console.error(`[Intel] Failed to store intel item ${id} for guild ${guildId}:`, error);
+      throw error;
+    }
+
+    // Create an intel entity for the embed
+    const intelEntity = new IntelEntity(guildId, intelItem);
+
+    // Create embed for the newly added ore site
+    const oreEmbed = this.createOreIntelEmbed(intelEntity);
+
+    await interaction.reply({
+      content: getThemeMessage(MessageCategory.SUCCESS, `Ore site intel added: ${name} (${oreType}) in ${system}${near ? ` near ${near}` : ''}`).text,
+      embeds: [oreEmbed],
+      flags: MessageFlags.Ephemeral
+    });
+
+    // Set timer to delete the ephemeral message after 30 seconds (skip in test environment)
+    if (process.env.NODE_ENV !== 'test') {
+      setTimeout(async () => {
+        try {
+          await interaction.deleteReply();
+        } catch (error) {
+          console.error(`[Intel] Error auto-deleting ephemeral response for ore ${id}:`, error);
+        }
+      }, 30_000); // 30 seconds
+    }
+  }
+
+  /**
    * Handle list subcommand - shows current intel items
    * @param interaction - Discord interaction object
    * @param guildId - Guild ID
@@ -246,7 +337,10 @@ class IntelCommandHandler implements IntelCommand {
       return this.createRiftIntelEmbed(item);
     }
     
-    // TODO: Add checks for other intel types here
+    // Check if it's an OreIntelItem
+    if (isOreIntelItem(content)) {
+      return this.createOreIntelEmbed(item);
+    }
     
     // Fallback to default embed
     return this.createDefaultIntelEmbed(item);
@@ -290,6 +384,35 @@ class IntelCommandHandler implements IntelCommand {
     embed.addFields(
       { name: 'Rift Type', value: riftContent.type, inline: true },
       { name: 'System', value: riftContent.systemName, inline: true },
+      { name: 'Near Gravity Well', value: nearValue, inline: true }
+    );
+    
+    if (item.intelItem.location) {
+      embed.addFields({ name: 'Location', value: item.intelItem.location, inline: true });
+    }
+    
+    return embed;
+  }
+
+  /**
+   * Convert ore intel item to Discord embed
+   * @param item - Intel entity with ore intel content
+   * @returns Discord embed representing the ore intel item
+   */
+  private createOreIntelEmbed(item: IntelEntity): EmbedBuilder {
+    const embed = new EmbedBuilder()
+      .setTitle(`⛏️ Ore Site Intel: ${item.intelItem.id}`)
+      .setTimestamp(new Date(item.intelItem.timestamp))
+      .setColor(0xf59e0b);
+    
+    embed.addFields({ name: 'Reporter', value: `<@${item.intelItem.reporter}>`, inline: true });
+    
+    const oreContent = item.intelItem.content as OreIntelItem;
+    const nearValue = oreContent.near.trim() === '' ? '*( empty )*' : oreContent.near;
+    embed.addFields(
+      { name: 'Ore Type', value: oreContent.oreType, inline: true },
+      { name: 'Site Name', value: oreContent.name, inline: true },
+      { name: 'System', value: oreContent.systemName, inline: true },
       { name: 'Near Gravity Well', value: nearValue, inline: true }
     );
     

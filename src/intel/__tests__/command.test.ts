@@ -34,6 +34,38 @@ describe('Intel Command', () => {
     jest.clearAllMocks();
   });
 
+  describe('Command Structure', () => {
+    it('should have ore subcommand with required parameters', () => {
+      const commandData = intelCommand.data.toJSON();
+      
+      // Verify the command has the expected basic structure
+      expect(commandData.name).toBe('intel');
+      expect(commandData.description).toBe('🕵️ Manage intelligence reports');
+      
+      // Find the ore subcommand
+      const oreSubcommand = commandData.options?.find(
+        (option: any) => option.name === 'ore'
+      );
+      
+      expect(oreSubcommand).toBeDefined();
+      expect(oreSubcommand?.description).toBe('Add an ore site intel report');
+      
+      // Verify ore subcommand has the expected options
+      const oreOptions = (oreSubcommand as any)?.options || [];
+      expect(oreOptions.length).toBeGreaterThanOrEqual(3); // At least oretype, name, system
+      
+      const hasOreType = oreOptions.some((opt: any) => opt.name === 'oretype' && opt.required === true);
+      const hasName = oreOptions.some((opt: any) => opt.name === 'name' && opt.required === true);
+      const hasSystem = oreOptions.some((opt: any) => opt.name === 'system' && opt.required === true);
+      const hasNear = oreOptions.some((opt: any) => opt.name === 'near' && opt.required === false);
+      
+      expect(hasOreType).toBe(true);
+      expect(hasName).toBe(true);
+      expect(hasSystem).toBe(true);
+      expect(hasNear).toBe(true);
+    });
+  });
+
   describe('Rift Subcommand Execution', () => {
     const mockInteraction = {
       guildId: '123456789012345678',
