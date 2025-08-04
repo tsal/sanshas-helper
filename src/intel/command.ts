@@ -10,6 +10,8 @@ import {
 import { getThemeMessage, MessageCategory } from '../themes';
 import { IntelEntity, RiftIntelItem, isRiftIntelItem, OreIntelItem, isOreIntelItem, IntelItem, storeIntelItem, deleteIntelByIdFromInteraction } from './types';
 import { repository } from '../database/repository';
+import { IntelTypeRegistry } from './handlers/registry';
+import { IntelTypeHandler } from './handlers/types';
 
 /**
  * Intel command interface for Discord interactions
@@ -17,6 +19,7 @@ import { repository } from '../database/repository';
 export interface IntelCommand {
   data: SlashCommandBuilder | SlashCommandSubcommandsOnlyBuilder;
   execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
+  registerHandler?: (type: string, handler: IntelTypeHandler<any>) => void;
 }
 
 /**
@@ -547,3 +550,142 @@ class IntelCommandHandler implements IntelCommand {
  * Export the command instance
  */
 export const intelCommand: IntelCommand = new IntelCommandHandler();
+
+/**
+ * Intel2 Command Handler - New plugin-based architecture
+ */
+class Intel2CommandHandler implements IntelCommand {
+  private readonly registry: IntelTypeRegistry;
+  private _data: SlashCommandBuilder;
+
+  constructor() {
+    this.registry = new IntelTypeRegistry();
+    this._data = this.buildDynamicCommand();
+  }
+
+  /**
+   * Build the command with dynamic subcommands based on registered handlers
+   */
+  private buildDynamicCommand(): SlashCommandBuilder {
+    const command = new SlashCommandBuilder()
+      .setName('intel2')
+      .setDescription('Manage intelligence reports using new plugin architecture');
+
+    // Add subcommands for each registered handler
+    const registeredTypes = this.registry.getRegisteredTypes();
+    for (const type of registeredTypes) {
+      const handler = this.registry.getHandler(type);
+      if (handler) {
+        command.addSubcommand(subcommand => {
+          subcommand
+            .setName(type)
+            .setDescription(handler.description);
+          
+          // Add options from handler (simplified for now)
+          // TODO: Properly map SlashCommandOptionBuilder to specific option types
+          // For now, we'll skip adding individual options and focus on subcommand structure
+          
+          return subcommand;
+        });
+      }
+    }
+
+    return command;
+  }
+
+  /**
+   * Command definition using plugin architecture
+   */
+  public get data(): SlashCommandBuilder {
+    return this._data;
+  }
+
+  /**
+   * Get all registered intel types
+   * @returns Array of registered type names
+   */
+  public getRegisteredTypes(): string[] {
+    return this.registry.getRegisteredTypes();
+  }
+
+  /**
+   * Register an intel type handler
+   * @param type - The intel type name
+   * @param handler - The handler instance
+   */
+  public registerHandler(type: string, handler: IntelTypeHandler<any>): void {
+    this.registry.register(type, handler);
+    this._data = this.buildDynamicCommand(); // Rebuild command with new handler
+  }
+
+  /**
+   * Execute the intel2 command
+   * @param interaction - Discord interaction object
+   */
+  public async execute(interaction: ChatInputCommandInteraction): Promise<void> {
+    const subcommand = interaction.options.getSubcommand();
+    
+    // Get the handler for this subcommand type
+    const handler = this.registry.getHandler(subcommand);
+    
+    if (!handler) {
+      throw new Error(`No handler registered for intel type: ${subcommand}`);
+    }
+    
+    try {
+      // Parse interaction data through the handler
+      const content = handler.parseInteractionData(interaction);
+      
+      // Validate the content
+      if (!handler.validate(content)) {
+        await interaction.reply({ 
+          content: `Invalid ${subcommand} intel provided.`, 
+          ephemeral: true 
+        });
+        return;
+      }
+      
+      // Create intel entity
+      const intelItem: IntelItem = {
+        id: handler.generateId(),
+        timestamp: new Date().toISOString(),
+        reporter: interaction.user.id,
+        content
+      };
+      
+      const entity = new IntelEntity(interaction.guildId!, intelItem);
+      
+      // Store the entity
+      await repository.store(entity);
+      
+      // Create embed and respond
+      const embed = handler.createEmbed(entity);
+      const successMessage = handler.getSuccessMessage(content);
+      
+      await interaction.reply({ 
+        content: successMessage,
+        embeds: [embed] 
+      });
+    } catch (error) {
+      console.error(`Error executing ${subcommand} intel command:`, error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
+      if (interaction.replied) {
+        await interaction.followUp({
+          content: `Error processing ${subcommand} intel: ${errorMessage}`,
+          ephemeral: true
+        });
+      } else {
+        await interaction.reply({
+          content: `Error processing ${subcommand} intel: ${errorMessage}`,
+          ephemeral: true
+        });
+      }
+    }
+  }
+}
+
+/**
+ * Export the intel2 command instance
+ */
+export const intel2Command: IntelCommand = new Intel2CommandHandler();
