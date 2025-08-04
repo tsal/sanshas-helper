@@ -3,6 +3,8 @@ import * as dotenv from 'dotenv';
 import { ensureAllRoles } from './discord';
 import { roleCommand } from './discord/roles';
 import { intelCommand } from './intel/command';
+import { RiftIntelTypeHandler } from './intel/handlers/rift-handler';
+import { OreIntelTypeHandler } from './intel/handlers/ore-handler';
 import { getBotConfig } from './config';
 import { initializeThemes } from './themes';
 import { isDatabaseEnabled, repository, Version, getBotVersion, shouldRegisterCommands } from './database';
@@ -56,7 +58,11 @@ const registerCommands = async (clientId: string): Promise<void> => {
   try {
     console.log('Started refreshing application (/) commands.');
     
-    // Global commands
+    // Register handlers with intel command (now using "intel" name)
+    intelCommand.registerHandler('rift', new RiftIntelTypeHandler());
+    intelCommand.registerHandler('ore', new OreIntelTypeHandler());
+    
+    // Global commands - using intel implementation with "intel" name
     const globalCommands = [roleCommand.data.toJSON(), intelCommand.data.toJSON()];
     
     await rest.put(

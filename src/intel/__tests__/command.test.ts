@@ -1,20 +1,14 @@
 import { intelCommand } from '../command';
 import { storeIntelItem, deleteIntelByIdFromInteraction } from '../types';
 import { ChatInputCommandInteraction } from 'discord.js';
+import { RiftIntelTypeHandler } from '../handlers/rift-handler';
+import { OreIntelTypeHandler } from '../handlers/ore-handler';
 
 // Mock the storeIntelItem and deleteIntelByIdFromInteraction functions
 jest.mock('../types', () => ({
   ...jest.requireActual('../types'),
   storeIntelItem: jest.fn(),
   deleteIntelByIdFromInteraction: jest.fn()
-}));
-
-// Mock the repository
-jest.mock('../../database/repository', () => ({
-  repository: {
-    getAll: jest.fn(() => Promise.resolve([])),
-    purgeStaleItems: jest.fn(() => Promise.resolve(0))
-  }
 }));
 
 // Mock the themes
@@ -32,6 +26,10 @@ const mockDeleteIntelByIdFromInteraction = deleteIntelByIdFromInteraction as jes
 describe('Intel Command', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    
+    // Register handlers for tests (similar to main application)
+    intelCommand.registerHandler('rift', new RiftIntelTypeHandler());
+    intelCommand.registerHandler('ore', new OreIntelTypeHandler());
   });
 
   describe('Command Structure', () => {
