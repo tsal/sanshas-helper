@@ -42,36 +42,6 @@ describe('RiftIntelTypeHandler', () => {
     expect(handler.isOfType(nullContent)).toBe(false);
   });
 
-  it('should validate rift content correctly', () => {
-    // Arrange
-    const validContent = {
-      type: '0200',
-      systemName: 'Thera',
-      near: 'P1L4'
-    };
-    const validContentEmptyNear = {
-      type: '0200',
-      systemName: 'Thera',
-      near: ''
-    };
-    const invalidEmptyType = {
-      type: '',
-      systemName: 'Thera',
-      near: 'P1L4'
-    };
-    const invalidEmptySystem = {
-      type: '0200',
-      systemName: '',
-      near: 'P1L4'
-    };
-    
-    // Act & Assert
-    expect(handler.validate(validContent)).toBe(true);
-    expect(handler.validate(validContentEmptyNear)).toBe(true);
-    expect(handler.validate(invalidEmptyType)).toBe(false);
-    expect(handler.validate(invalidEmptySystem)).toBe(false);
-  });
-
   it('should generate appropriate success message', () => {
     // Arrange
     const contentWithNear = {

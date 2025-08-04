@@ -41,10 +41,6 @@ class MockIntelTypeHandler implements IntelTypeHandler<MockIntelItem> {
     return embed;
   }
 
-  validate(content: MockIntelItem): boolean {
-    return typeof content.testField === 'string' && content.testField.length > 0;
-  }
-
   isOfType(content: unknown): content is MockIntelItem {
     if (typeof content !== 'object' || content === null) {
       return false;
@@ -77,14 +73,6 @@ describe('IntelTypeHandler Interface', () => {
     expect(id1).toMatch(/^mock-\d+-[a-z0-9]+$/);
     expect(id2).toMatch(/^mock-\d+-[a-z0-9]+$/);
     expect(id1).not.toBe(id2);
-  });
-
-  it('should validate content correctly', () => {
-    const validContent: MockIntelItem = { testField: 'valid' };
-    const invalidContent: MockIntelItem = { testField: '' };
-    
-    expect(mockHandler.validate(validContent)).toBe(true);
-    expect(mockHandler.validate(invalidContent)).toBe(false);
   });
 
   it('should correctly identify content type', () => {

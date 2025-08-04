@@ -15,7 +15,6 @@ const createMockHandler = (type: string): IntelTypeHandler<MockIntelItem> => ({
   parseInteractionData: () => ({ testField: 'test' }),
   generateId: () => `${type}-test-id`,
   createEmbed: () => ({ toJSON: () => ({}) } as any),
-  validate: () => true,
   isOfType: (_content: unknown): _content is MockIntelItem => true,
   getSuccessMessage: () => `${type} added`
 });
