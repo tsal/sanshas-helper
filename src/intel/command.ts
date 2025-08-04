@@ -8,7 +8,7 @@ import {
   InteractionResponse
 } from 'discord.js';
 import { getThemeMessage, MessageCategory } from '../themes';
-import { IntelEntity, RiftIntelItem, isRiftIntelItem, OreIntelItem, isOreIntelItem, IntelItem, storeIntelItem, deleteIntelByIdFromInteraction } from './types';
+import { IntelEntity, RiftIntelItem, isRiftIntelItem, OreIntelItem, isOreIntelItem, FleetIntelItem, isFleetIntelItem, IntelItem, storeIntelItem, deleteIntelByIdFromInteraction } from './types';
 import { repository } from '../database/repository';
 import { IntelTypeRegistry } from './handlers/registry';
 import { IntelTypeHandler } from './handlers/types';
@@ -416,6 +416,11 @@ export class IntelCommandHandler implements IntelCommand {
       return this.createOreIntelEmbed(item);
     }
     
+    // Check if it's a FleetIntelItem
+    if (isFleetIntelItem(content)) {
+      return this.createFleetIntelEmbed(item);
+    }
+    
     // Fallback to default embed
     return this.createDefaultIntelEmbed(item);
   }
@@ -488,6 +493,38 @@ export class IntelCommandHandler implements IntelCommand {
       { name: 'Site Name', value: oreContent.name, inline: true },
       { name: 'System', value: oreContent.systemName, inline: true },
       { name: 'Near Gravity Well', value: nearValue, inline: true }
+    );
+    
+    if (item.intelItem.location) {
+      embed.addFields({ name: 'Location', value: item.intelItem.location, inline: true });
+    }
+    
+    return embed;
+  }
+
+  /**
+   * Convert fleet intel item to Discord embed
+   * @param item - Intel entity with fleet intel content
+   * @returns Discord embed representing the fleet intel item
+   */
+  private createFleetIntelEmbed(item: IntelEntity): EmbedBuilder {
+    const embed = new EmbedBuilder()
+      .setTitle(`⚔️ Fleet Intel: ${item.intelItem.id}`)
+      .setTimestamp(new Date(item.intelItem.timestamp))
+      .setColor(0xef4444);
+    
+    embed.addFields({ name: 'Reporter', value: `<@${item.intelItem.reporter}>`, inline: true });
+    
+    const fleetContent = item.intelItem.content as FleetIntelItem;
+    const nearValue = fleetContent.near.trim() === '' ? '*( empty )*' : fleetContent.near;
+    const standingValue = fleetContent.standing.trim() === '' ? '*( empty )*' : fleetContent.standing;
+    
+    embed.addFields(
+      { name: 'Tribe/Fleet', value: fleetContent.tribeName, inline: true },
+      { name: 'Composition', value: fleetContent.comp, inline: true },
+      { name: 'System', value: fleetContent.system, inline: true },
+      { name: 'Near', value: nearValue, inline: true },
+      { name: 'Standing', value: standingValue, inline: true }
     );
     
     if (item.intelItem.location) {

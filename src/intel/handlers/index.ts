@@ -8,3 +8,6 @@
 
 export { IntelTypeHandler, SlashCommandOptionBuilder } from './types';
 export { IntelTypeRegistry } from './registry';
+export { RiftIntelTypeHandler } from './rift-handler';
+export { OreIntelTypeHandler } from './ore-handler';
+export { FleetIntelTypeHandler } from './fleet-handler';
