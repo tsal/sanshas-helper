@@ -8,7 +8,7 @@ import {
   InteractionResponse
 } from 'discord.js';
 import { getThemeMessage, MessageCategory } from '../themes';
-import { IntelEntity, RiftIntelItem, isRiftIntelItem, OreIntelItem, isOreIntelItem, IntelItem, storeIntelItem, deleteIntelByIdFromInteraction } from './types';
+import { IntelEntity, RiftIntelItem, isRiftIntelItem, OreIntelItem, isOreIntelItem, FleetIntelItem, isFleetIntelItem, SiteIntelItem, isSiteIntelItem, IntelItem, storeIntelItem, deleteIntelByIdFromInteraction } from './types';
 import { repository } from '../database/repository';
 import { IntelTypeRegistry } from './handlers/registry';
 import { IntelTypeHandler } from './handlers/types';
@@ -371,8 +371,8 @@ export class IntelCommandHandler implements IntelCommand {
     const type = interaction.options.getString('type', true);
     const id = interaction.options.getString('id', true);
 
-    // Handle supported types: rift and ore
-    if (type === 'rift' || type === 'ore') {
+    // Handle supported types: rift, ore, fleet, and site
+    if (this.registry.isSupportedType(type)) {
       try {
         await deleteIntelByIdFromInteraction(interaction, guildId, id);
         return;
@@ -414,6 +414,16 @@ export class IntelCommandHandler implements IntelCommand {
     // Check if it's an OreIntelItem
     if (isOreIntelItem(content)) {
       return this.createOreIntelEmbed(item);
+    }
+    
+    // Check if it's a FleetIntelItem
+    if (isFleetIntelItem(content)) {
+      return this.createFleetIntelEmbed(item);
+    }
+    
+    // Check if it's a SiteIntelItem
+    if (isSiteIntelItem(content)) {
+      return this.createSiteIntelEmbed(item);
     }
     
     // Fallback to default embed
@@ -489,6 +499,70 @@ export class IntelCommandHandler implements IntelCommand {
       { name: 'System', value: oreContent.systemName, inline: true },
       { name: 'Near Gravity Well', value: nearValue, inline: true }
     );
+    
+    if (item.intelItem.location) {
+      embed.addFields({ name: 'Location', value: item.intelItem.location, inline: true });
+    }
+    
+    return embed;
+  }
+
+  /**
+   * Convert fleet intel item to Discord embed
+   * @param item - Intel entity with fleet intel content
+   * @returns Discord embed representing the fleet intel item
+   */
+  private createFleetIntelEmbed(item: IntelEntity): EmbedBuilder {
+    const embed = new EmbedBuilder()
+      .setTitle(`⚔️ Fleet Intel: ${item.intelItem.id}`)
+      .setTimestamp(new Date(item.intelItem.timestamp))
+      .setColor(0xef4444);
+    
+    embed.addFields({ name: 'Reporter', value: `<@${item.intelItem.reporter}>`, inline: true });
+    
+    const fleetContent = item.intelItem.content as FleetIntelItem;
+    const nearValue = fleetContent.near.trim() === '' ? '*( empty )*' : fleetContent.near;
+    const standingValue = fleetContent.standing.trim() === '' ? '*( empty )*' : fleetContent.standing;
+    
+    embed.addFields(
+      { name: 'Tribe/Fleet', value: fleetContent.tribeName, inline: true },
+      { name: 'Composition', value: fleetContent.comp, inline: true },
+      { name: 'System', value: fleetContent.system, inline: true },
+      { name: 'Near', value: nearValue, inline: true },
+      { name: 'Standing', value: standingValue, inline: true }
+    );
+    
+    if (item.intelItem.location) {
+      embed.addFields({ name: 'Location', value: item.intelItem.location, inline: true });
+    }
+    
+    return embed;
+  }
+
+  /**
+   * Convert site intel item to Discord embed
+   * @param item - Intel entity with site intel content
+   * @returns Discord embed representing the site intel item
+   */
+  private createSiteIntelEmbed(item: IntelEntity): EmbedBuilder {
+    const embed = new EmbedBuilder()
+      .setTitle(`🏗️ Site Intel: ${item.intelItem.id}`)
+      .setTimestamp(new Date(item.intelItem.timestamp))
+      .setColor(0x8B4513);
+    
+    embed.addFields({ name: 'Reporter', value: `<@${item.intelItem.reporter}>`, inline: true });
+    
+    const siteContent = item.intelItem.content as SiteIntelItem;
+    
+    embed.addFields(
+      { name: 'Site Name', value: siteContent.name, inline: true },
+      { name: 'System', value: siteContent.system, inline: true },
+      { name: 'Triggered', value: siteContent.triggered, inline: true }
+    );
+    
+    if (siteContent.near) {
+      embed.addFields({ name: 'Near', value: siteContent.near, inline: true });
+    }
     
     if (item.intelItem.location) {
       embed.addFields({ name: 'Location', value: item.intelItem.location, inline: true });

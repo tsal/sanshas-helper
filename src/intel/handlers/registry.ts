@@ -46,4 +46,13 @@ export class IntelTypeRegistry {
   getRegisteredTypes(): string[] {
     return Array.from(this.handlers.keys());
   }
+
+  /**
+   * Check if a given string corresponds to a supported intel type
+   * @param type - The intel type string to validate
+   * @returns True if the type is supported (registered), false otherwise
+   */
+  isSupportedType(type: string): boolean {
+    return this.handlers.has(type);
+  }
 }

@@ -48,6 +48,50 @@ export const isOreIntelItem = (content: unknown): content is OreIntelItem => {
          typeof obj.near === 'string';
 };
 
+// Fleet intel: tribe name, composition, system, near location (optional), standing
+export interface FleetIntelItem extends IntelContentType {
+  tribeName: string;
+  comp: string;
+  system: string;
+  near: string;
+  standing: string;
+}
+
+// Type guard for FleetIntelItem validation
+export const isFleetIntelItem = (content: unknown): content is FleetIntelItem => {
+  if (typeof content !== 'object' || content === null) {
+    return false;
+  }
+  
+  const obj = content as Record<string, unknown>;
+  return typeof obj.tribeName === 'string' && 
+         typeof obj.comp === 'string' &&
+         typeof obj.system === 'string' && 
+         typeof obj.near === 'string' &&
+         typeof obj.standing === 'string';
+};
+
+// Site intel: name, system, triggered status, near location (optional)
+export interface SiteIntelItem extends IntelContentType {
+  name: string;
+  system: string;
+  triggered: string; // "yes" | "no" | "unknown"
+  near?: string;
+}
+
+// Type guard for SiteIntelItem validation
+export const isSiteIntelItem = (content: unknown): content is SiteIntelItem => {
+  if (typeof content !== 'object' || content === null) {
+    return false;
+  }
+  
+  const obj = content as Record<string, unknown>;
+  return typeof obj.name === 'string' && 
+         typeof obj.system === 'string' &&
+         typeof obj.triggered === 'string' && 
+         (obj.near === undefined || typeof obj.near === 'string');
+};
+
 // Intel item: ID, timestamp, reporter, content, optional location
 export interface IntelItem {
   id: string;
