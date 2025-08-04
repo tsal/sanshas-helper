@@ -371,8 +371,8 @@ export class IntelCommandHandler implements IntelCommand {
     const type = interaction.options.getString('type', true);
     const id = interaction.options.getString('id', true);
 
-    // Handle supported types: rift and ore
-    if (type === 'rift' || type === 'ore') {
+    // Handle supported types: rift, ore, fleet, and site
+    if (type === 'rift' || type === 'ore' || type === 'fleet' || type === 'site') {
       try {
         await deleteIntelByIdFromInteraction(interaction, guildId, id);
         return;
