@@ -66,12 +66,6 @@ export class RiftIntelTypeHandler implements IntelTypeHandler<RiftIntelItem> {
     return embed;
   }
 
-  validate(content: RiftIntelItem): boolean {
-    return typeof content.type === 'string' && content.type.trim() !== '' &&
-           typeof content.systemName === 'string' && content.systemName.trim() !== '' &&
-           typeof content.near === 'string'; // near can be empty
-  }
-
   isOfType(content: unknown): content is RiftIntelItem {
     if (typeof content !== 'object' || content === null) {
       return false;

@@ -54,13 +54,6 @@ export interface IntelTypeHandler<T extends IntelContentType> {
   createEmbed(entity: IntelEntity): EmbedBuilder;
 
   /**
-   * Validate that content matches this intel type's requirements
-   * @param content - Content to validate
-   * @returns True if content is valid for this intel type
-   */
-  validate(content: T): boolean;
-
-  /**
    * Type guard to check if unknown content is of this intel type
    * @param content - Unknown content to check
    * @returns True if content is of type T

@@ -73,13 +73,6 @@ export class OreIntelTypeHandler implements IntelTypeHandler<OreIntelItem> {
     return embed;
   }
 
-  validate(content: OreIntelItem): boolean {
-    return typeof content.oreType === 'string' && content.oreType.trim() !== '' &&
-           typeof content.name === 'string' && content.name.trim() !== '' &&
-           typeof content.systemName === 'string' && content.systemName.trim() !== '' &&
-           typeof content.near === 'string'; // near can be empty
-  }
-
   isOfType(content: unknown): content is OreIntelItem {
     if (typeof content !== 'object' || content === null) {
       return false;

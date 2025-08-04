@@ -554,7 +554,10 @@ export const intelCommand: IntelCommand = new IntelCommandHandler();
 /**
  * Intel2 Command Handler - New plugin-based architecture
  */
-class Intel2CommandHandler implements IntelCommand {
+/**
+ * Intel2CommandHandler class for plugin architecture
+ */
+export class Intel2CommandHandler implements IntelCommand {
   private readonly registry: IntelTypeRegistry;
   private _data: SlashCommandBuilder;
 
@@ -673,15 +676,6 @@ class Intel2CommandHandler implements IntelCommand {
       // Parse interaction data through the handler
       const content = handler.parseInteractionData(interaction);
       
-      // Validate the content
-      if (!handler.validate(content)) {
-        await interaction.reply({ 
-          content: `Invalid ${subcommand} intel provided.`, 
-          ephemeral: true 
-        });
-        return;
-      }
-      
       // Create intel entity
       const intelItem: IntelItem = {
         id: handler.generateId(),
@@ -690,19 +684,37 @@ class Intel2CommandHandler implements IntelCommand {
         content
       };
       
+      // Store the intel item using the same method as original intel command
+      try {
+        await storeIntelItem(interaction.guildId!, intelItem);
+      } catch (error) {
+        console.error(`[Intel] Failed to store intel item ${intelItem.id} for guild ${interaction.guildId}:`, error);
+        throw error;
+      }
+
+      // Create an intel entity for the embed
       const entity = new IntelEntity(interaction.guildId!, intelItem);
       
-      // Store the entity
-      await repository.store(entity);
-      
-      // Create embed and respond
+      // Create embed and respond with themed message
       const embed = handler.createEmbed(entity);
       const successMessage = handler.getSuccessMessage(content);
       
       await interaction.reply({ 
-        content: successMessage,
-        embeds: [embed] 
+        content: getThemeMessage(MessageCategory.SUCCESS, successMessage).text,
+        embeds: [embed],
+        flags: MessageFlags.Ephemeral
       });
+
+      // Set timer to delete the ephemeral message after 30 seconds (skip in test environment)
+      if (process.env.NODE_ENV !== 'test') {
+        setTimeout(async () => {
+          try {
+            await interaction.deleteReply();
+          } catch (error) {
+            console.error(`[Intel] Error auto-deleting ephemeral response for ${subcommand} ${intelItem.id}:`, error);
+          }
+        }, 30_000); // 30 seconds
+      }
     } catch (error) {
       console.error(`Error executing ${subcommand} intel command:`, error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -710,12 +722,12 @@ class Intel2CommandHandler implements IntelCommand {
       if (interaction.replied) {
         await interaction.followUp({
           content: `Error processing ${subcommand} intel: ${errorMessage}`,
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       } else {
         await interaction.reply({
           content: `Error processing ${subcommand} intel: ${errorMessage}`,
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
     }

@@ -1,24 +1,14 @@
-import { intelCommand, intel2Command } from '../command';
+import { intelCommand, intel2Command, Intel2CommandHandler } from '../command';
 import { storeIntelItem, deleteIntelByIdFromInteraction } from '../types';
-import { ChatInputCommandInteraction, EmbedBuilder } from 'discord.js';
+import { ChatInputCommandInteraction, EmbedBuilder, MessageFlags } from 'discord.js';
 import { RiftIntelTypeHandler } from '../handlers/rift-handler';
 import { OreIntelTypeHandler } from '../handlers/ore-handler';
-import { repository } from '../../database/repository';
 
 // Mock the storeIntelItem and deleteIntelByIdFromInteraction functions
 jest.mock('../types', () => ({
   ...jest.requireActual('../types'),
   storeIntelItem: jest.fn(),
   deleteIntelByIdFromInteraction: jest.fn()
-}));
-
-// Mock the repository
-jest.mock('../../database/repository', () => ({
-  repository: {
-    getAll: jest.fn(() => Promise.resolve([])),
-    purgeStaleItems: jest.fn(() => Promise.resolve(0)),
-    store: jest.fn(() => Promise.resolve())
-  }
 }));
 
 // Mock the themes
@@ -32,7 +22,6 @@ jest.mock('../../themes', () => ({
 
 const mockStoreIntelItem = storeIntelItem as jest.MockedFunction<typeof storeIntelItem>;
 const mockDeleteIntelByIdFromInteraction = deleteIntelByIdFromInteraction as jest.MockedFunction<typeof deleteIntelByIdFromInteraction>;
-const mockRepositoryStore = repository.store as jest.MockedFunction<typeof repository.store>;
 
 describe('Intel Command', () => {
   beforeEach(() => {
@@ -377,25 +366,20 @@ describe('Intel2Command', () => {
 
   describe('execute method', () => {
     it('should execute complete flow with handler and store intel', async () => {
-      // Setup mock handler with all required methods
-      const mockHandler = {
-        type: 'rift',
-        description: 'Test rift handler',
-        getCommandOptions: jest.fn().mockReturnValue([]),
-        parseInteractionData: jest.fn().mockReturnValue({ type: 'inert', systemName: 'Test', near: 'P1L4' }),
-        generateId: jest.fn().mockReturnValue('test-id-123'),
-        createEmbed: jest.fn().mockReturnValue(new EmbedBuilder().setTitle('Test Embed')),
-        validate: jest.fn().mockReturnValue(true),
-        isOfType: (_content: unknown): _content is any => true,
-        getSuccessMessage: jest.fn().mockReturnValue('Intel added successfully!')
-      };
-
-      // Register the mock handler using the interface method
-      intel2Command.registerHandler!('rift', mockHandler);
+      // Create fresh command instance for isolated testing
+      const command = new Intel2CommandHandler();
+      
+      // Use real rift handler for authentic business logic testing
+      const riftHandler = new RiftIntelTypeHandler();
+      command.registerHandler!('rift', riftHandler);
 
       const mockInteraction = {
         options: {
-          getSubcommand: jest.fn().mockReturnValue('rift')
+          getSubcommand: jest.fn().mockReturnValue('rift'),
+          getString: jest.fn()
+            .mockReturnValueOnce('Unstable Wormhole')  // type
+            .mockReturnValueOnce('Jita')               // system
+            .mockReturnValueOnce('P1L4')               // near
         },
         guildId: '123456789012345678',
         user: { id: '987654321098765432' },
@@ -403,45 +387,47 @@ describe('Intel2Command', () => {
       } as unknown as ChatInputCommandInteraction;
 
       // Execute
-      await intel2Command.execute(mockInteraction);
+      await command.execute(mockInteraction);
 
-      // Verify handler methods called
-      expect(mockHandler.parseInteractionData).toHaveBeenCalledWith(mockInteraction);
-      expect(mockHandler.validate).toHaveBeenCalledWith({ type: 'inert', systemName: 'Test', near: 'P1L4' });
-      expect(mockHandler.generateId).toHaveBeenCalled();
-      expect(mockHandler.createEmbed).toHaveBeenCalled();
-      expect(mockHandler.getSuccessMessage).toHaveBeenCalledWith({ type: 'inert', systemName: 'Test', near: 'P1L4' });
+      // Verify business outcomes - intel storage
+      expect(mockStoreIntelItem).toHaveBeenCalledWith(
+        '123456789012345678',
+        expect.objectContaining({
+          id: expect.stringMatching(/^rift-\d+-[a-z0-9]+$/),
+          timestamp: expect.any(String),
+          reporter: '987654321098765432',
+          content: {
+            type: 'Unstable Wormhole',
+            systemName: 'Jita',
+            near: 'P1L4'
+          }
+        })
+      );
 
-      // Verify repository store called
-      expect(mockRepositoryStore).toHaveBeenCalled();
-
-      // Verify Discord reply
+      // Verify business outcomes - themed response with ephemeral flag
       expect(mockInteraction.reply).toHaveBeenCalledWith({
-        content: 'Intel added successfully!',
-        embeds: [expect.any(EmbedBuilder)]
+        content: 'Test message',
+        embeds: [expect.any(EmbedBuilder)],
+        flags: MessageFlags.Ephemeral
       });
     });
 
-    it('should handle validation failure and respond with error', async () => {
-      // Setup mock handler that fails validation
-      const mockHandler = {
-        type: 'rift',
-        description: 'Test rift handler',
-        getCommandOptions: jest.fn().mockReturnValue([]),
-        parseInteractionData: jest.fn().mockReturnValue({ type: 'invalid', systemName: 'Test', near: 'P1L4' }),
-        generateId: jest.fn().mockReturnValue('test-id-123'),
-        createEmbed: jest.fn().mockReturnValue(new EmbedBuilder().setTitle('Test Embed')),
-        validate: jest.fn().mockReturnValue(false), // Validation fails
-        isOfType: (_content: unknown): _content is any => true,
-        getSuccessMessage: jest.fn().mockReturnValue('Intel added successfully!')
-      };
-
-      // Register the mock handler
-      intel2Command.registerHandler!('rift', mockHandler);
+    it('should execute complete flow with ore handler and store intel', async () => {
+      // Create fresh command instance for isolated testing
+      const command = new Intel2CommandHandler();
+      
+      // Use real ore handler for authentic business logic testing
+      const oreHandler = new OreIntelTypeHandler();
+      command.registerHandler!('ore', oreHandler);
 
       const mockInteraction = {
         options: {
-          getSubcommand: jest.fn().mockReturnValue('rift')
+          getSubcommand: jest.fn().mockReturnValue('ore'),
+          getString: jest.fn()
+            .mockReturnValueOnce('Pyroxeres')         // oretype
+            .mockReturnValueOnce('Mining Site Alpha') // name
+            .mockReturnValueOnce('Jita')              // system
+            .mockReturnValueOnce('P2L3')              // near
         },
         guildId: '123456789012345678',
         user: { id: '987654321098765432' },
@@ -449,30 +435,39 @@ describe('Intel2Command', () => {
       } as unknown as ChatInputCommandInteraction;
 
       // Execute
-      await intel2Command.execute(mockInteraction);
+      await command.execute(mockInteraction);
 
-      // Verify handler methods called up to validation
-      expect(mockHandler.parseInteractionData).toHaveBeenCalledWith(mockInteraction);
-      expect(mockHandler.validate).toHaveBeenCalledWith({ type: 'invalid', systemName: 'Test', near: 'P1L4' });
+      // Verify business outcomes - intel storage
+      expect(mockStoreIntelItem).toHaveBeenCalledWith(
+        '123456789012345678',
+        expect.objectContaining({
+          id: expect.stringMatching(/^ore-\d+-[a-z0-9]+$/),
+          timestamp: expect.any(String),
+          reporter: '987654321098765432',
+          content: {
+            oreType: 'Pyroxeres',
+            name: 'Mining Site Alpha',
+            systemName: 'Jita',
+            near: 'P2L3'
+          }
+        })
+      );
 
-      // Verify these methods were NOT called after validation failure
-      expect(mockHandler.createEmbed).not.toHaveBeenCalled();
-      expect(mockHandler.getSuccessMessage).not.toHaveBeenCalled();
-
-      // Verify repository store was NOT called
-      expect(mockRepositoryStore).not.toHaveBeenCalled();
-
-      // Verify error response
+      // Verify business outcomes - themed response with ephemeral flag
       expect(mockInteraction.reply).toHaveBeenCalledWith({
-        content: 'Invalid rift intel provided.',
-        ephemeral: true
+        content: 'Test message',
+        embeds: [expect.any(EmbedBuilder)],
+        flags: MessageFlags.Ephemeral
       });
     });
 
-    it('should handle handler exceptions gracefully. hand.', async () => {
+    it('should handle handler exceptions gracefully', async () => {
+      // Create fresh command instance for isolated testing
+      const command = new Intel2CommandHandler();
+      
       // Setup mock handler that throws an error
       const mockHandler = {
-        type: 'rift',
+        type: 'rift-error',
         description: 'Test rift handler',
         getCommandOptions: jest.fn().mockReturnValue([]),
         parseInteractionData: jest.fn().mockImplementation(() => {
@@ -480,17 +475,16 @@ describe('Intel2Command', () => {
         }),
         generateId: jest.fn().mockReturnValue('test-id-123'),
         createEmbed: jest.fn().mockReturnValue(new EmbedBuilder().setTitle('Test Embed')),
-        validate: jest.fn().mockReturnValue(true),
         isOfType: (_content: unknown): _content is any => true,
         getSuccessMessage: jest.fn().mockReturnValue('Intel added successfully!')
       };
 
       // Register the mock handler
-      intel2Command.registerHandler!('rift', mockHandler);
+      command.registerHandler!('rift-error', mockHandler);
 
       const mockInteraction = {
         options: {
-          getSubcommand: jest.fn().mockReturnValue('rift')
+          getSubcommand: jest.fn().mockReturnValue('rift-error')
         },
         guildId: '123456789012345678',
         user: { id: '987654321098765432' },
@@ -502,15 +496,15 @@ describe('Intel2Command', () => {
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
       // Execute
-      await intel2Command.execute(mockInteraction);
+      await command.execute(mockInteraction);
 
       // Verify error was logged
-      expect(consoleSpy).toHaveBeenCalledWith('Error executing rift intel command:', expect.any(Error));
+      expect(consoleSpy).toHaveBeenCalledWith('Error executing rift-error intel command:', expect.any(Error));
 
       // Verify error response
       expect(mockInteraction.reply).toHaveBeenCalledWith({
-        content: 'Error processing rift intel: Parse error',
-        ephemeral: true
+        content: 'Error processing rift-error intel: Parse error',
+        flags: MessageFlags.Ephemeral
       });
 
       // Cleanup
