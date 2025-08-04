@@ -3,6 +3,8 @@ import * as dotenv from 'dotenv';
 import { ensureAllRoles } from './discord';
 import { roleCommand } from './discord/roles';
 import { intelCommand } from './intel/command';
+import { intel2Command } from './intel/command';
+import { RiftIntelTypeHandler } from './intel/handlers/rift-handler';
 import { getBotConfig } from './config';
 import { initializeThemes } from './themes';
 import { isDatabaseEnabled, repository, Version, getBotVersion, shouldRegisterCommands } from './database';
@@ -75,6 +77,25 @@ const registerCommands = async (clientId: string): Promise<void> => {
       } catch (error) {
         console.error('Failed to update globals version record:', error);
       }
+    }
+    
+    // TEMPORARY: Register intel2 command for testing guild
+    try {
+      const testGuildId = '245179286535798784';
+      console.log('Registering intel2 command for test guild...');
+      
+      // Register rift handler with intel2 command
+      (intel2Command as any).registerHandler('rift', new RiftIntelTypeHandler());
+      
+      // Register guild command
+      await rest.put(
+        Routes.applicationGuildCommands(clientId, testGuildId),
+        { body: [intel2Command.data.toJSON()] }
+      );
+      
+      console.log('Successfully registered intel2 command for test guild');
+    } catch (error) {
+      console.error('Failed to register intel2 guild command:', error);
     }
     
   } catch (error) {
@@ -218,6 +239,8 @@ client.on('interactionCreate', async (interaction): Promise<void> => {
         await roleCommand.execute(interaction);
       } else if (interaction.commandName === 'intel') {
         await intelCommand.execute(interaction);
+      } else if (interaction.commandName === 'intel2') {
+        await intel2Command.execute(interaction);
       }
     }
     // Button interactions are now handled by InteractionCollector in roleCommand
