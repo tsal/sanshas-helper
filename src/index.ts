@@ -83,28 +83,6 @@ const registerCommands = async (clientId: string): Promise<void> => {
       }
     }
     
-    // TEMPORARY: Register intel2 command for testing guild
-    // COMMENTED OUT FOR DEINTEGRATION - MOVING TO REPLACE MAIN INTEL COMMAND
-    /*
-    try {
-      const testGuildId = '245179286535798784';
-      console.log('Registering intel2 command for test guild...');
-      
-      // Register rift handler with intel command
-      intelCommand.registerHandler('rift', new RiftIntelTypeHandler());
-      
-      // Register guild command
-      await rest.put(
-        Routes.applicationGuildCommands(clientId, testGuildId),
-        { body: [intelCommand.data.toJSON()] }
-      );
-      
-      console.log('Successfully registered intel command for test guild');
-    } catch (error) {
-      console.error('Failed to register intel2 guild command:', error);
-    }
-    */
-    
   } catch (error) {
     console.error('Error registering commands:', error);
   }
