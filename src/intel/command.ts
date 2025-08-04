@@ -23,10 +23,10 @@ export interface IntelCommand {
 }
 
 /**
- * Intel Command Handler - New plugin-based architecture
+ * Intel Command Handler
  */
 /**
- * IntelCommandHandler class for plugin architecture
+ * IntelCommandHandler class
  */
 export class IntelCommandHandler implements IntelCommand {
   private readonly registry: IntelTypeRegistry;
@@ -112,7 +112,7 @@ export class IntelCommandHandler implements IntelCommand {
   }
 
   /**
-   * Command definition using plugin architecture
+   * Command definition
    */
   public get data(): SlashCommandBuilder {
     return this._data;
@@ -137,7 +137,7 @@ export class IntelCommandHandler implements IntelCommand {
   }
 
   /**
-   * Execute the intel2 command
+   * Execute the intel command
    * @param interaction - Discord interaction object
    */
   public async execute(interaction: ChatInputCommandInteraction): Promise<void> {
