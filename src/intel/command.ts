@@ -581,9 +581,46 @@ class Intel2CommandHandler implements IntelCommand {
             .setName(type)
             .setDescription(handler.description);
           
-          // Add options from handler (simplified for now)
-          // TODO: Properly map SlashCommandOptionBuilder to specific option types
-          // For now, we'll skip adding individual options and focus on subcommand structure
+          // Add options from handler
+          const options = handler.getCommandOptions();
+          for (const option of options) {
+            if (option.name === 'type') {
+              subcommand.addStringOption(stringOption => 
+                stringOption
+                  .setName(option.name)
+                  .setDescription(option.description)
+                  .setRequired(option.required ?? false)
+              );
+            } else if (option.name === 'oretype') {
+              subcommand.addStringOption(stringOption => 
+                stringOption
+                  .setName(option.name)
+                  .setDescription(option.description)
+                  .setRequired(option.required ?? false)
+              );
+            } else if (option.name === 'name') {
+              subcommand.addStringOption(stringOption => 
+                stringOption
+                  .setName(option.name)
+                  .setDescription(option.description)
+                  .setRequired(option.required ?? false)
+              );
+            } else if (option.name === 'system') {
+              subcommand.addStringOption(stringOption => 
+                stringOption
+                  .setName(option.name)
+                  .setDescription(option.description)
+                  .setRequired(option.required ?? false)
+              );
+            } else if (option.name === 'near') {
+              subcommand.addStringOption(stringOption => 
+                stringOption
+                  .setName(option.name)
+                  .setDescription(option.description)
+                  .setRequired(option.required ?? false)
+              );
+            }
+          }
           
           return subcommand;
         });
