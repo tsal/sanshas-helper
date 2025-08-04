@@ -19,20 +19,55 @@ import { IntelTypeHandler } from './handlers/types';
 export interface IntelCommand {
   data: SlashCommandBuilder | SlashCommandSubcommandsOnlyBuilder;
   execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
-  registerHandler?: (type: string, handler: IntelTypeHandler<any>) => void;
+  registerHandler: (type: string, handler: IntelTypeHandler<any>) => void;
 }
 
 /**
- * Intel Command Handler
+ * Intel Command Handler - New plugin-based architecture
  */
-class IntelCommandHandler implements IntelCommand {
+/**
+ * IntelCommandHandler class for plugin architecture
+ */
+export class IntelCommandHandler implements IntelCommand {
+  private readonly registry: IntelTypeRegistry;
+  private _data: SlashCommandBuilder;
+
+  constructor() {
+    this.registry = new IntelTypeRegistry();
+    this._data = this.buildDynamicCommand();
+  }
+
   /**
-   * Command definition with subcommands
+   * Build the command with dynamic subcommands based on registered handlers
    */
-  public readonly data = new SlashCommandBuilder()
-    .setName('intel')
-    .setDescription('🕵️ Manage intelligence reports')
-    .addSubcommand(subcommand =>
+  private buildDynamicCommand(): SlashCommandBuilder {
+    const command = new SlashCommandBuilder()
+      .setName('intel')
+      .setDescription('🕵️ Manage intelligence reports');
+
+    // Add subcommands for each registered handler
+    const registeredTypes = this.registry.getRegisteredTypes();
+    for (const type of registeredTypes) {
+      const handler = this.registry.getHandler(type);
+      if (handler) {
+        command.addSubcommand(subcommand => {
+          subcommand
+            .setName(type)
+            .setDescription(handler.description);
+          
+          // Add options directly from handler
+          const options = handler.getCommandOptions();
+          for (const option of options) {
+            subcommand.options.push(option);
+          }
+          
+          return subcommand;
+        });
+      }
+    }
+
+    // Add list subcommand (reusing original implementation)
+    command.addSubcommand(subcommand =>
       subcommand
         .setName('list')
         .setDescription('View current intelligence reports')
@@ -52,60 +87,10 @@ class IntelCommandHandler implements IntelCommand {
             .setMinValue(1)
             .setMaxValue(10)
         )
-    )
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('rift')
-        .setDescription('Add a rift intel report')
-        .addStringOption(option =>
-          option
-            .setName('type')
-            .setDescription('Rift type code')
-            .setRequired(true)
-        )
-        .addStringOption(option =>
-          option
-            .setName('system')
-            .setDescription('System name where the rift is located')
-            .setRequired(true)
-        )
-        .addStringOption(option =>
-          option
-            .setName('near')
-            .setDescription('What the rift is near (e.g., P1L4)')
-            .setRequired(false)
-        )
-    )
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('ore')
-        .setDescription('Add an ore site intel report')
-        .addStringOption(option =>
-          option
-            .setName('oretype')
-            .setDescription('Type of ore resource (e.g., carbon, metal, common)')
-            .setRequired(true)
-        )
-        .addStringOption(option =>
-          option
-            .setName('name')
-            .setDescription('Name of the ore site (e.g., Carbon Debris Cluster)')
-            .setRequired(true)
-        )
-        .addStringOption(option =>
-          option
-            .setName('system')
-            .setDescription('System name where the ore site is located')
-            .setRequired(true)
-        )
-        .addStringOption(option =>
-          option
-            .setName('near')
-            .setDescription('What the ore site is near (e.g., P1L4)')
-            .setRequired(false)
-        )
-    )
-    .addSubcommand(subcommand =>
+    );
+
+    // Add del subcommand (reusing original implementation)
+    command.addSubcommand(subcommand =>
       subcommand
         .setName('del')
         .setDescription('Delete an intel report')
@@ -123,185 +108,127 @@ class IntelCommandHandler implements IntelCommand {
         )
     );
 
+    return command;
+  }
+
   /**
-   * Execute the command
+   * Command definition using plugin architecture
+   */
+  public get data(): SlashCommandBuilder {
+    return this._data;
+  }
+
+  /**
+   * Get all registered intel types
+   * @returns Array of registered type names
+   */
+  public getRegisteredTypes(): string[] {
+    return this.registry.getRegisteredTypes();
+  }
+
+  /**
+   * Register an intel type handler
+   * @param type - The intel type name
+   * @param handler - The handler instance
+   */
+  public registerHandler(type: string, handler: IntelTypeHandler<any>): void {
+    this.registry.register(type, handler);
+    this._data = this.buildDynamicCommand(); // Rebuild command with new handler
+  }
+
+  /**
+   * Execute the intel2 command
    * @param interaction - Discord interaction object
    */
   public async execute(interaction: ChatInputCommandInteraction): Promise<void> {
+    const subcommand = interaction.options.getSubcommand();
+    
+    // Validate guild ID is present
+    if (!interaction.guildId) {
+      await this.sendErrorResponse(interaction, 'This command can only be used in a server.');
+      return;
+    }
+    
+    // Handle list subcommand (reusing original implementation)
+    if (subcommand === 'list') {
+      return this.handleListSubcommand(interaction, interaction.guildId);
+    }
+    
+    // Handle del subcommand (reusing original implementation)
+    if (subcommand === 'del') {
+      return this.handleDelSubcommand(interaction, interaction.guildId);
+    }
+    
+    // Get the handler for this subcommand type
+    const handler = this.registry.getHandler(subcommand);
+    
+    if (!handler) {
+      throw new Error(`No handler registered for intel type: ${subcommand}`);
+    }
+    
     try {
-      const guildId = interaction.guildId;
-      if (!guildId) {
-        await this.sendErrorResponse(interaction, 'This command can only be used in a server.');
-        return;
-      }
-
-      const subcommand = interaction.options.getSubcommand();
+      // Parse interaction data through the handler
+      const content = handler.parseInteractionData(interaction);
       
-      switch (subcommand) {
-        case 'list':
-          await this.handleListSubcommand(interaction, guildId);
-          break;
-        case 'rift':
-          await this.handleRiftSubcommand(interaction, guildId);
-          break;
-        case 'ore':
-          await this.handleOreSubcommand(interaction, guildId);
-          break;
-        case 'del':
-          await this.handleDelSubcommand(interaction, guildId);
-          break;
-        default:
-          await this.sendErrorResponse(interaction, 'Unknown subcommand.');
-      }
-    } catch (error) {
-      console.error('Intel command execution failed:', error);
-      await this.sendErrorResponse(interaction, 'Command execution failed.');
-    }
-  }
-
-  /**
-   * Handle del subcommand - deletes an intel item by type and ID
-   * @param interaction - Discord interaction object
-   * @param guildId - Guild ID
-   */
-  private async handleDelSubcommand(interaction: ChatInputCommandInteraction, guildId: string): Promise<void> {
-    const type = interaction.options.getString('type', true);
-    const id = interaction.options.getString('id', true);
-
-    // Handle supported types: rift and ore
-    if (type === 'rift' || type === 'ore') {
+      // Create intel entity
+      const intelItem: IntelItem = {
+        id: handler.generateId(),
+        timestamp: new Date().toISOString(),
+        reporter: interaction.user.id,
+        content
+      };
+      
+      // Store the intel item using the same method as original intel command
       try {
-        await deleteIntelByIdFromInteraction(interaction, guildId, id);
-        return;
+        await storeIntelItem(interaction.guildId, intelItem);
       } catch (error) {
-        console.error(`[Intel] Failed to delete ${type} intel ${id}:`, error);
-        await this.sendErrorResponse(interaction, 'Failed to delete intel item.');
-        return;
+        console.error(`[Intel] Failed to store intel item ${intelItem.id} for guild ${interaction.guildId}:`, error);
+        throw error;
+      }
+
+      // Create an intel entity for the embed
+      const entity = new IntelEntity(interaction.guildId, intelItem);
+      
+      // Create embed and respond with themed message
+      const embed = handler.createEmbed(entity);
+      const successMessage = handler.getSuccessMessage(content);
+      
+      await interaction.reply({ 
+        content: getThemeMessage(MessageCategory.SUCCESS, successMessage).text,
+        embeds: [embed],
+        flags: MessageFlags.Ephemeral
+      });
+
+      // Set timer to delete the ephemeral message after 30 seconds (skip in test environment)
+      if (process.env.NODE_ENV !== 'test') {
+        setTimeout(async () => {
+          try {
+            await interaction.deleteReply();
+          } catch (error) {
+            console.error(`[Intel] Error auto-deleting ephemeral response for ${subcommand} ${intelItem.id}:`, error);
+          }
+        }, 30_000); // 30 seconds
+      }
+    } catch (error) {
+      console.error(`Error executing ${subcommand} intel command:`, error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
+      if (interaction.replied) {
+        await interaction.followUp({
+          content: `Error processing ${subcommand} intel: ${errorMessage}`,
+          flags: MessageFlags.Ephemeral
+        });
+      } else {
+        await interaction.reply({
+          content: `Error processing ${subcommand} intel: ${errorMessage}`,
+          flags: MessageFlags.Ephemeral
+        });
       }
     }
-
-    // If we reach here, the type is unknown/untracked
-    await this.sendErrorResponse(interaction, `Unknown or untracked intel type: ${type}`);
   }
 
   /**
-   * Handle rift subcommand - adds a new rift intel item
-   * @param interaction - Discord interaction object
-   * @param guildId - Guild ID
-   */
-  private async handleRiftSubcommand(interaction: ChatInputCommandInteraction, guildId: string): Promise<void> {
-    const type = interaction.options.getString('type', true);
-    const system = interaction.options.getString('system', true);
-    const near = interaction.options.getString('near') || ''; // Default to empty string if not provided
-    
-    // Generate unique ID for the intel item
-    const id = `rift-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
-    const riftIntel: RiftIntelItem = {
-      type,
-      systemName: system,
-      near
-    };
-    
-    const intelItem: IntelItem = {
-      id,
-      timestamp: new Date().toISOString(),
-      reporter: interaction.user.id,
-      content: riftIntel
-    };
-    
-    try {
-      await storeIntelItem(guildId, intelItem);
-    } catch (error) {
-      console.error(`[Intel] Failed to store intel item ${id} for guild ${guildId}:`, error);
-      throw error;
-    }
-
-    // Create an intel entity for the embed
-    const intelEntity = new IntelEntity(guildId, intelItem);
-
-    // Create embed for the newly added rift
-    const riftEmbed = this.createRiftIntelEmbed(intelEntity);
-
-    await interaction.reply({
-      content: getThemeMessage(MessageCategory.SUCCESS, `Rift intel added: ${type} in ${system}${near ? ` near ${near}` : ''}`).text,
-      embeds: [riftEmbed],
-      flags: MessageFlags.Ephemeral
-    });
-
-    // Set timer to delete the ephemeral message after 30 seconds (skip in test environment)
-    if (process.env.NODE_ENV !== 'test') {
-      setTimeout(async () => {
-        try {
-          await interaction.deleteReply();
-        } catch (error) {
-          console.error(`[Intel] Error auto-deleting ephemeral response for rift ${id}:`, error);
-        }
-      }, 30_000); // 30 seconds
-    }
-  }
-
-  /**
-   * Handle ore subcommand - adds a new ore site intel item
-   * @param interaction - Discord interaction object
-   * @param guildId - Guild ID
-   */
-  private async handleOreSubcommand(interaction: ChatInputCommandInteraction, guildId: string): Promise<void> {
-    const oreType = interaction.options.getString('oretype', true);
-    const name = interaction.options.getString('name', true);
-    const system = interaction.options.getString('system', true);
-    const near = interaction.options.getString('near') || ''; // Default to empty string if not provided
-    
-    // Generate unique ID for the intel item
-    const id = `ore-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
-    const oreIntel: OreIntelItem = {
-      oreType,
-      name,
-      systemName: system,
-      near
-    };
-    
-    const intelItem: IntelItem = {
-      id,
-      timestamp: new Date().toISOString(),
-      reporter: interaction.user.id,
-      content: oreIntel
-    };
-    
-    try {
-      await storeIntelItem(guildId, intelItem);
-    } catch (error) {
-      console.error(`[Intel] Failed to store intel item ${id} for guild ${guildId}:`, error);
-      throw error;
-    }
-
-    // Create an intel entity for the embed
-    const intelEntity = new IntelEntity(guildId, intelItem);
-
-    // Create embed for the newly added ore site
-    const oreEmbed = this.createOreIntelEmbed(intelEntity);
-
-    await interaction.reply({
-      content: getThemeMessage(MessageCategory.SUCCESS, `Ore site intel added: ${name} (${oreType}) in ${system}${near ? ` near ${near}` : ''}`).text,
-      embeds: [oreEmbed],
-      flags: MessageFlags.Ephemeral
-    });
-
-    // Set timer to delete the ephemeral message after 30 seconds (skip in test environment)
-    if (process.env.NODE_ENV !== 'test') {
-      setTimeout(async () => {
-        try {
-          await interaction.deleteReply();
-        } catch (error) {
-          console.error(`[Intel] Error auto-deleting ephemeral response for ore ${id}:`, error);
-        }
-      }, 30_000); // 30 seconds
-    }
-  }
-
-  /**
-   * Handle list subcommand - shows current intel items
+   * Handle list subcommand - shows current intel items (reused from original implementation)
    * @param interaction - Discord interaction object
    * @param guildId - Guild ID
    */
@@ -319,7 +246,7 @@ class IntelCommandHandler implements IntelCommand {
   }
 
   /**
-   * Fetch all intel items
+   * Fetch all intel items (reused from original implementation)
    * @param guildId - Guild to process
    * @returns Array of intel entities
    */
@@ -329,7 +256,7 @@ class IntelCommandHandler implements IntelCommand {
   }
 
   /**
-   * Purge stale intel items
+   * Purge stale intel items (reused from original implementation)
    * @param guildId - Guild to process
    * @returns Number of items purged
    */
@@ -339,107 +266,7 @@ class IntelCommandHandler implements IntelCommand {
   }
 
   /**
-   * Convert intel item to Discord embed
-   * @param item - Intel entity to convert
-   * @returns Discord embed representing the intel item
-   */
-  private createIntelEmbed(item: IntelEntity): EmbedBuilder {
-    // Type-check content and route to appropriate embed method
-    const content = item.intelItem.content;
-    
-    // Check if it's a RiftIntelItem
-    if (isRiftIntelItem(content)) {
-      return this.createRiftIntelEmbed(item);
-    }
-    
-    // Check if it's an OreIntelItem
-    if (isOreIntelItem(content)) {
-      return this.createOreIntelEmbed(item);
-    }
-    
-    // Fallback to default embed
-    return this.createDefaultIntelEmbed(item);
-  }
-
-  /**
-   * Convert intel item to Discord embed
-   * @param item - Intel entity to convert
-   * @returns Discord embed representing the intel item
-   */
-  private createDefaultIntelEmbed(item: IntelEntity): EmbedBuilder {
-    const embed = new EmbedBuilder()
-      .setTitle(`Intel: ${item.intelItem.id}`)
-      .setTimestamp(new Date(item.intelItem.timestamp))
-      .setColor(0x1e40af);
-    
-    embed.addFields({ name: 'Reporter', value: `<@${item.intelItem.reporter}>`, inline: true });
-    
-    if (item.intelItem.location) {
-      embed.addFields({ name: 'Location', value: item.intelItem.location, inline: true });
-    }
-    
-    return embed;
-  }
-
-  /**
-   * Convert rift intel item to Discord embed
-   * @param item - Intel entity with rift intel content
-   * @returns Discord embed representing the rift intel item
-   */
-  private createRiftIntelEmbed(item: IntelEntity): EmbedBuilder {
-    const embed = new EmbedBuilder()
-      .setTitle(`🌌 Rift Intel: ${item.intelItem.id}`)
-      .setTimestamp(new Date(item.intelItem.timestamp))
-      .setColor(0x8b5cf6);
-    
-    embed.addFields({ name: 'Reporter', value: `<@${item.intelItem.reporter}>`, inline: true });
-    
-    const riftContent = item.intelItem.content as RiftIntelItem;
-    const nearValue = riftContent.near.trim() === '' ? '*( empty )*' : riftContent.near;
-    embed.addFields(
-      { name: 'Rift Type', value: riftContent.type, inline: true },
-      { name: 'System', value: riftContent.systemName, inline: true },
-      { name: 'Near Gravity Well', value: nearValue, inline: true }
-    );
-    
-    if (item.intelItem.location) {
-      embed.addFields({ name: 'Location', value: item.intelItem.location, inline: true });
-    }
-    
-    return embed;
-  }
-
-  /**
-   * Convert ore intel item to Discord embed
-   * @param item - Intel entity with ore intel content
-   * @returns Discord embed representing the ore intel item
-   */
-  private createOreIntelEmbed(item: IntelEntity): EmbedBuilder {
-    const embed = new EmbedBuilder()
-      .setTitle(`⛏️ Ore Site Intel: ${item.intelItem.id}`)
-      .setTimestamp(new Date(item.intelItem.timestamp))
-      .setColor(0xf59e0b);
-    
-    embed.addFields({ name: 'Reporter', value: `<@${item.intelItem.reporter}>`, inline: true });
-    
-    const oreContent = item.intelItem.content as OreIntelItem;
-    const nearValue = oreContent.near.trim() === '' ? '*( empty )*' : oreContent.near;
-    embed.addFields(
-      { name: 'Ore Type', value: oreContent.oreType, inline: true },
-      { name: 'Site Name', value: oreContent.name, inline: true },
-      { name: 'System', value: oreContent.systemName, inline: true },
-      { name: 'Near Gravity Well', value: nearValue, inline: true }
-    );
-    
-    if (item.intelItem.location) {
-      embed.addFields({ name: 'Location', value: item.intelItem.location, inline: true });
-    }
-    
-    return embed;
-  }
-
-  /**
-   * Send intel report to user
+   * Send intel report to user (reused from original implementation)
    * @param interaction - Discord interaction
    * @param items - Intel items to display
    * @param timeoutMinutes - Minutes before the report expires (optional)
@@ -536,7 +363,32 @@ class IntelCommandHandler implements IntelCommand {
   }
 
   /**
-   * Send error response with proper theming
+   * Handle del subcommand - deletes an intel item by type and ID (reused from original implementation)
+   * @param interaction - Discord interaction object
+   * @param guildId - Guild ID
+   */
+  private async handleDelSubcommand(interaction: ChatInputCommandInteraction, guildId: string): Promise<void> {
+    const type = interaction.options.getString('type', true);
+    const id = interaction.options.getString('id', true);
+
+    // Handle supported types: rift and ore
+    if (type === 'rift' || type === 'ore') {
+      try {
+        await deleteIntelByIdFromInteraction(interaction, guildId, id);
+        return;
+      } catch (error) {
+        console.error(`[Intel] Failed to delete ${type} intel ${id}:`, error);
+        await this.sendErrorResponse(interaction, 'Failed to delete intel item.');
+        return;
+      }
+    }
+
+    // If we reach here, the type is unknown/untracked
+    await this.sendErrorResponse(interaction, `Unknown or untracked intel type: ${type}`);
+  }
+
+  /**
+   * Send error response with proper theming (reused from original implementation)
    */
   private async sendErrorResponse(interaction: ChatInputCommandInteraction, message: string): Promise<void> {
     await interaction.reply({
@@ -544,197 +396,109 @@ class IntelCommandHandler implements IntelCommand {
       flags: MessageFlags.Ephemeral
     });
   }
+
+  /**
+   * Convert intel item to Discord embed (reused from original implementation)
+   * @param item - Intel entity to convert
+   * @returns Discord embed representing the intel item
+   */
+  private createIntelEmbed(item: IntelEntity): EmbedBuilder {
+    // Type-check content and route to appropriate embed method
+    const content = item.intelItem.content;
+    
+    // Check if it's a RiftIntelItem
+    if (isRiftIntelItem(content)) {
+      return this.createRiftIntelEmbed(item);
+    }
+    
+    // Check if it's an OreIntelItem
+    if (isOreIntelItem(content)) {
+      return this.createOreIntelEmbed(item);
+    }
+    
+    // Fallback to default embed
+    return this.createDefaultIntelEmbed(item);
+  }
+
+  /**
+   * Convert intel item to Discord embed (reused from original implementation)
+   * @param item - Intel entity to convert
+   * @returns Discord embed representing the intel item
+   */
+  private createDefaultIntelEmbed(item: IntelEntity): EmbedBuilder {
+    const embed = new EmbedBuilder()
+      .setTitle(`Intel: ${item.intelItem.id}`)
+      .setTimestamp(new Date(item.intelItem.timestamp))
+      .setColor(0x1e40af);
+    
+    embed.addFields({ name: 'Reporter', value: `<@${item.intelItem.reporter}>`, inline: true });
+    
+    if (item.intelItem.location) {
+      embed.addFields({ name: 'Location', value: item.intelItem.location, inline: true });
+    }
+    
+    return embed;
+  }
+
+  /**
+   * Convert rift intel item to Discord embed (reused from original implementation)
+   * @param item - Intel entity with rift intel content
+   * @returns Discord embed representing the rift intel item
+   */
+  private createRiftIntelEmbed(item: IntelEntity): EmbedBuilder {
+    const embed = new EmbedBuilder()
+      .setTitle(`🌌 Rift Intel: ${item.intelItem.id}`)
+      .setTimestamp(new Date(item.intelItem.timestamp))
+      .setColor(0x8b5cf6);
+    
+    embed.addFields({ name: 'Reporter', value: `<@${item.intelItem.reporter}>`, inline: true });
+    
+    const riftContent = item.intelItem.content as RiftIntelItem;
+    const nearValue = riftContent.near.trim() === '' ? '*( empty )*' : riftContent.near;
+    embed.addFields(
+      { name: 'Rift Type', value: riftContent.type, inline: true },
+      { name: 'System', value: riftContent.systemName, inline: true },
+      { name: 'Near Gravity Well', value: nearValue, inline: true }
+    );
+    
+    if (item.intelItem.location) {
+      embed.addFields({ name: 'Location', value: item.intelItem.location, inline: true });
+    }
+    
+    return embed;
+  }
+
+  /**
+   * Convert ore intel item to Discord embed (reused from original implementation)
+   * @param item - Intel entity with ore intel content
+   * @returns Discord embed representing the ore intel item
+   */
+  private createOreIntelEmbed(item: IntelEntity): EmbedBuilder {
+    const embed = new EmbedBuilder()
+      .setTitle(`⛏️ Ore Site Intel: ${item.intelItem.id}`)
+      .setTimestamp(new Date(item.intelItem.timestamp))
+      .setColor(0xf59e0b);
+    
+    embed.addFields({ name: 'Reporter', value: `<@${item.intelItem.reporter}>`, inline: true });
+    
+    const oreContent = item.intelItem.content as OreIntelItem;
+    const nearValue = oreContent.near.trim() === '' ? '*( empty )*' : oreContent.near;
+    embed.addFields(
+      { name: 'Ore Type', value: oreContent.oreType, inline: true },
+      { name: 'Site Name', value: oreContent.name, inline: true },
+      { name: 'System', value: oreContent.systemName, inline: true },
+      { name: 'Near Gravity Well', value: nearValue, inline: true }
+    );
+    
+    if (item.intelItem.location) {
+      embed.addFields({ name: 'Location', value: item.intelItem.location, inline: true });
+    }
+    
+    return embed;
+  }
 }
 
 /**
- * Export the command instance
+ * Export the intel command instance
  */
 export const intelCommand: IntelCommand = new IntelCommandHandler();
-
-/**
- * Intel2 Command Handler - New plugin-based architecture
- */
-/**
- * Intel2CommandHandler class for plugin architecture
- */
-export class Intel2CommandHandler implements IntelCommand {
-  private readonly registry: IntelTypeRegistry;
-  private _data: SlashCommandBuilder;
-
-  constructor() {
-    this.registry = new IntelTypeRegistry();
-    this._data = this.buildDynamicCommand();
-  }
-
-  /**
-   * Build the command with dynamic subcommands based on registered handlers
-   */
-  private buildDynamicCommand(): SlashCommandBuilder {
-    const command = new SlashCommandBuilder()
-      .setName('intel2')
-      .setDescription('Manage intelligence reports using new plugin architecture');
-
-    // Add subcommands for each registered handler
-    const registeredTypes = this.registry.getRegisteredTypes();
-    for (const type of registeredTypes) {
-      const handler = this.registry.getHandler(type);
-      if (handler) {
-        command.addSubcommand(subcommand => {
-          subcommand
-            .setName(type)
-            .setDescription(handler.description);
-          
-          // Add options from handler
-          const options = handler.getCommandOptions();
-          for (const option of options) {
-            if (option.name === 'type') {
-              subcommand.addStringOption(stringOption => 
-                stringOption
-                  .setName(option.name)
-                  .setDescription(option.description)
-                  .setRequired(option.required ?? false)
-              );
-            } else if (option.name === 'oretype') {
-              subcommand.addStringOption(stringOption => 
-                stringOption
-                  .setName(option.name)
-                  .setDescription(option.description)
-                  .setRequired(option.required ?? false)
-              );
-            } else if (option.name === 'name') {
-              subcommand.addStringOption(stringOption => 
-                stringOption
-                  .setName(option.name)
-                  .setDescription(option.description)
-                  .setRequired(option.required ?? false)
-              );
-            } else if (option.name === 'system') {
-              subcommand.addStringOption(stringOption => 
-                stringOption
-                  .setName(option.name)
-                  .setDescription(option.description)
-                  .setRequired(option.required ?? false)
-              );
-            } else if (option.name === 'near') {
-              subcommand.addStringOption(stringOption => 
-                stringOption
-                  .setName(option.name)
-                  .setDescription(option.description)
-                  .setRequired(option.required ?? false)
-              );
-            }
-          }
-          
-          return subcommand;
-        });
-      }
-    }
-
-    return command;
-  }
-
-  /**
-   * Command definition using plugin architecture
-   */
-  public get data(): SlashCommandBuilder {
-    return this._data;
-  }
-
-  /**
-   * Get all registered intel types
-   * @returns Array of registered type names
-   */
-  public getRegisteredTypes(): string[] {
-    return this.registry.getRegisteredTypes();
-  }
-
-  /**
-   * Register an intel type handler
-   * @param type - The intel type name
-   * @param handler - The handler instance
-   */
-  public registerHandler(type: string, handler: IntelTypeHandler<any>): void {
-    this.registry.register(type, handler);
-    this._data = this.buildDynamicCommand(); // Rebuild command with new handler
-  }
-
-  /**
-   * Execute the intel2 command
-   * @param interaction - Discord interaction object
-   */
-  public async execute(interaction: ChatInputCommandInteraction): Promise<void> {
-    const subcommand = interaction.options.getSubcommand();
-    
-    // Get the handler for this subcommand type
-    const handler = this.registry.getHandler(subcommand);
-    
-    if (!handler) {
-      throw new Error(`No handler registered for intel type: ${subcommand}`);
-    }
-    
-    try {
-      // Parse interaction data through the handler
-      const content = handler.parseInteractionData(interaction);
-      
-      // Create intel entity
-      const intelItem: IntelItem = {
-        id: handler.generateId(),
-        timestamp: new Date().toISOString(),
-        reporter: interaction.user.id,
-        content
-      };
-      
-      // Store the intel item using the same method as original intel command
-      try {
-        await storeIntelItem(interaction.guildId!, intelItem);
-      } catch (error) {
-        console.error(`[Intel] Failed to store intel item ${intelItem.id} for guild ${interaction.guildId}:`, error);
-        throw error;
-      }
-
-      // Create an intel entity for the embed
-      const entity = new IntelEntity(interaction.guildId!, intelItem);
-      
-      // Create embed and respond with themed message
-      const embed = handler.createEmbed(entity);
-      const successMessage = handler.getSuccessMessage(content);
-      
-      await interaction.reply({ 
-        content: getThemeMessage(MessageCategory.SUCCESS, successMessage).text,
-        embeds: [embed],
-        flags: MessageFlags.Ephemeral
-      });
-
-      // Set timer to delete the ephemeral message after 30 seconds (skip in test environment)
-      if (process.env.NODE_ENV !== 'test') {
-        setTimeout(async () => {
-          try {
-            await interaction.deleteReply();
-          } catch (error) {
-            console.error(`[Intel] Error auto-deleting ephemeral response for ${subcommand} ${intelItem.id}:`, error);
-          }
-        }, 30_000); // 30 seconds
-      }
-    } catch (error) {
-      console.error(`Error executing ${subcommand} intel command:`, error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      
-      if (interaction.replied) {
-        await interaction.followUp({
-          content: `Error processing ${subcommand} intel: ${errorMessage}`,
-          flags: MessageFlags.Ephemeral
-        });
-      } else {
-        await interaction.reply({
-          content: `Error processing ${subcommand} intel: ${errorMessage}`,
-          flags: MessageFlags.Ephemeral
-        });
-      }
-    }
-  }
-}
-
-/**
- * Export the intel2 command instance
- */
-export const intel2Command: IntelCommand = new Intel2CommandHandler();
