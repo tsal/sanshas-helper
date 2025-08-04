@@ -71,6 +71,27 @@ export const isFleetIntelItem = (content: unknown): content is FleetIntelItem =>
          typeof obj.standing === 'string';
 };
 
+// Site intel: name, system, triggered status, near location (optional)
+export interface SiteIntelItem extends IntelContentType {
+  name: string;
+  system: string;
+  triggered: string; // "yes" | "no" | "unknown"
+  near?: string;
+}
+
+// Type guard for SiteIntelItem validation
+export const isSiteIntelItem = (content: unknown): content is SiteIntelItem => {
+  if (typeof content !== 'object' || content === null) {
+    return false;
+  }
+  
+  const obj = content as Record<string, unknown>;
+  return typeof obj.name === 'string' && 
+         typeof obj.system === 'string' &&
+         typeof obj.triggered === 'string' && 
+         (obj.near === undefined || typeof obj.near === 'string');
+};
+
 // Intel item: ID, timestamp, reporter, content, optional location
 export interface IntelItem {
   id: string;

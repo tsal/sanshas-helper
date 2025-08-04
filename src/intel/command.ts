@@ -8,7 +8,7 @@ import {
   InteractionResponse
 } from 'discord.js';
 import { getThemeMessage, MessageCategory } from '../themes';
-import { IntelEntity, RiftIntelItem, isRiftIntelItem, OreIntelItem, isOreIntelItem, FleetIntelItem, isFleetIntelItem, IntelItem, storeIntelItem, deleteIntelByIdFromInteraction } from './types';
+import { IntelEntity, RiftIntelItem, isRiftIntelItem, OreIntelItem, isOreIntelItem, FleetIntelItem, isFleetIntelItem, SiteIntelItem, isSiteIntelItem, IntelItem, storeIntelItem, deleteIntelByIdFromInteraction } from './types';
 import { repository } from '../database/repository';
 import { IntelTypeRegistry } from './handlers/registry';
 import { IntelTypeHandler } from './handlers/types';
@@ -421,6 +421,11 @@ export class IntelCommandHandler implements IntelCommand {
       return this.createFleetIntelEmbed(item);
     }
     
+    // Check if it's a SiteIntelItem
+    if (isSiteIntelItem(content)) {
+      return this.createSiteIntelEmbed(item);
+    }
+    
     // Fallback to default embed
     return this.createDefaultIntelEmbed(item);
   }
@@ -526,6 +531,38 @@ export class IntelCommandHandler implements IntelCommand {
       { name: 'Near', value: nearValue, inline: true },
       { name: 'Standing', value: standingValue, inline: true }
     );
+    
+    if (item.intelItem.location) {
+      embed.addFields({ name: 'Location', value: item.intelItem.location, inline: true });
+    }
+    
+    return embed;
+  }
+
+  /**
+   * Convert site intel item to Discord embed
+   * @param item - Intel entity with site intel content
+   * @returns Discord embed representing the site intel item
+   */
+  private createSiteIntelEmbed(item: IntelEntity): EmbedBuilder {
+    const embed = new EmbedBuilder()
+      .setTitle(`🏗️ Site Intel: ${item.intelItem.id}`)
+      .setTimestamp(new Date(item.intelItem.timestamp))
+      .setColor(0x8B4513);
+    
+    embed.addFields({ name: 'Reporter', value: `<@${item.intelItem.reporter}>`, inline: true });
+    
+    const siteContent = item.intelItem.content as SiteIntelItem;
+    
+    embed.addFields(
+      { name: 'Site Name', value: siteContent.name, inline: true },
+      { name: 'System', value: siteContent.system, inline: true },
+      { name: 'Triggered', value: siteContent.triggered, inline: true }
+    );
+    
+    if (siteContent.near) {
+      embed.addFields({ name: 'Near', value: siteContent.near, inline: true });
+    }
     
     if (item.intelItem.location) {
       embed.addFields({ name: 'Location', value: item.intelItem.location, inline: true });

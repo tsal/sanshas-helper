@@ -6,6 +6,7 @@ import { intelCommand } from './intel/command';
 import { RiftIntelTypeHandler } from './intel/handlers/rift-handler';
 import { OreIntelTypeHandler } from './intel/handlers/ore-handler';
 import { FleetIntelTypeHandler } from './intel/handlers/fleet-handler';
+import { SiteIntelTypeHandler } from './intel/handlers/site-handler';
 import { getBotConfig } from './config';
 import { initializeThemes } from './themes';
 import { isDatabaseEnabled, repository, Version, getBotVersion, shouldRegisterCommands } from './database';
@@ -63,6 +64,7 @@ const registerCommands = async (clientId: string): Promise<void> => {
     intelCommand.registerHandler('rift', new RiftIntelTypeHandler());
     intelCommand.registerHandler('ore', new OreIntelTypeHandler());
     intelCommand.registerHandler('fleet', new FleetIntelTypeHandler());
+    intelCommand.registerHandler('site', new SiteIntelTypeHandler());
     
     // Global commands - using intel implementation with "intel" name
     const globalCommands = [roleCommand.data.toJSON(), intelCommand.data.toJSON()];
