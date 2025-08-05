@@ -22,6 +22,7 @@ A Discord bot for EVE Frontier role management with thematic messaging. Built wi
    ```bash
    cp local-example.env .env
    # Edit .env with your bot token
+   # Optionally set DATABASE_PATH for intel features
    ```
 
 3. **Run:**
@@ -98,10 +99,27 @@ Manage intelligence reports for rift and ore sites.
   - `system` (string, required): System name where the ore site is located  
   - `near` (string, optional): What the ore site is near (e.g., P1L4)  
 
+- `/intel fleet`  
+  Add a fleet intel report.  
+  Options:  
+  - `tribename` (string, required): Name of the tribe/fleet  
+  - `comp` (string, required): Fleet composition  
+  - `system` (string, required): System name where the fleet is located  
+  - `near` (string, optional): What the fleet is near (e.g., P1L4)  
+  - `standing` (string, optional): Fleet standing/attitude  
+
+- `/intel site`  
+  Add a site intel report.  
+  Options:  
+  - `name` (string, required): Name of the site  
+  - `system` (string, required): System name where the site is located  
+  - `triggered` (string, required): Whether the site is triggered  
+  - `near` (string, optional): What the site is near (e.g., P1L4)  
+
 - `/intel del`  
   Delete an intel report.  
   Options:  
-  - `type` (string, required): Intel type (`rift` or `ore`)  
+  - `type` (string, required): Intel type (`rift`, `ore`, `fleet`, or `site`)  
   - `id` (string, required): Intel item ID to delete  
 
 ##### Example
@@ -109,8 +127,10 @@ Manage intelligence reports for rift and ore sites.
 ```plaintext
 /intel rift type:RIFT-A system:ZXY-123 near:P1L4
 /intel ore oretype:carbon name:Carbon Debris Cluster system:ZXY-123 near:P1L4
+/intel fleet tribename:Sansha comp:5x Frigate system:ZXY-123 near:P1L4 standing:hostile
+/intel site name:Combat Site system:ZXY-123 triggered:yes near:P1L4
 /intel list timeout:10 pages:2
-/intel del type:ore id:ore-123456789
+/intel del type:fleet id:fleet-123456789
 ```
 
 ## Configuration Options
@@ -124,7 +144,10 @@ Manage intelligence reports for rift and ore sites.
 - **`TRIBE_ROLES`**: Comma-separated list of enabled roles (default: all roles)
 - **`RESPONSE_THEME`**: Message theme - `kuvakei` or `triglav` (default: `kuvakei`)
 - **`ROLES_COMMAND_NAME`**: Slash command name (default: `eve-roles`)
-- TODO: Update this list; for now see example env files
+- **`DATABASE_PATH`**: Path to database file for intel storage (default: disabled)
+- **`DEFAULT_INTEL_EXPIRATION`**: Intel expiration time in hours (default: 24)
+
+See `local-example.env` for detailed configuration examples.
 
 ## Development
 
