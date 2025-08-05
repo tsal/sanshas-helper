@@ -1,5 +1,5 @@
 import { repository } from '../repository';
-import { IntelEntity } from '../../../intel/types';
+import { IntelEntity } from '../../../discord/intel/types';
 import { DatabaseEntity, Purgeable } from '../../types';
 import { tmpdir } from 'os';
 import { join } from 'path';

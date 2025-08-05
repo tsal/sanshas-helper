@@ -1,8 +1,8 @@
 import { OreIntelItem, isOreIntelItem, IntelItem, IntelEntity, storeIntelItem } from '../types';
-import { repository } from '../../database/repository';
+import { repository } from '../../../database/repository';
 
 // Mock the database repository
-jest.mock('../../database/repository', () => ({
+jest.mock('../../../database/repository', () => ({
   repository: {
     store: jest.fn(),
     deleteById: jest.fn()

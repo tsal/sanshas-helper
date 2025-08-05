@@ -7,9 +7,9 @@ import {
   Message,
   InteractionResponse
 } from 'discord.js';
-import { getThemeMessage, MessageCategory } from '../themes';
+import { getThemeMessage, MessageCategory } from '../../themes';
 import { IntelEntity, RiftIntelItem, isRiftIntelItem, OreIntelItem, isOreIntelItem, FleetIntelItem, isFleetIntelItem, SiteIntelItem, isSiteIntelItem, IntelItem, storeIntelItem, deleteIntelByIdFromInteraction } from './types';
-import { repository } from '../database/repository';
+import { repository } from '../../database/repository';
 import { IntelTypeRegistry } from './handlers/registry';
 import { IntelTypeHandler } from './handlers/types';
 

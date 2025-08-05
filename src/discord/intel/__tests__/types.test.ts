@@ -1,13 +1,13 @@
 import { IntelItem, IntelContentType, RiftIntelItem, IntelEntity, isIntelItem, storeIntelItem } from '../types';
 
 // Mock the database repository
-jest.mock('../../database/repository', () => ({
+jest.mock('../../../database/repository', () => ({
   repository: {
     store: jest.fn()
   }
 }));
 
-const { repository: mockRepository } = jest.requireMock('../../database/repository');
+const { repository: mockRepository } = jest.requireMock('../../../database/repository');
 
 describe('Intel Types Module', () => {
   beforeEach(() => {
@@ -413,8 +413,8 @@ describe('Intel Types Module', () => {
     
     beforeAll(async () => {
       // Import the real repository (not mocked)
-      jest.unmock('../../database/repository');
-      const { repository } = await import('../../database/repository');
+      jest.unmock('../../../database/repository');
+      const { repository } = await import('../../../database/repository');
       realRepository = repository;
     });
 
@@ -430,7 +430,7 @@ describe('Intel Types Module', () => {
 
     afterAll(() => {
       // Re-mock for other tests
-      jest.mock('../../database/repository', () => ({
+      jest.mock('../../../database/repository', () => ({
         repository: {
           store: jest.fn()
         }

@@ -1,6 +1,6 @@
-import { DatabaseEntity, Purgeable } from '../database/types';
-import { repository } from '../database/repository';
-import { getThemeMessage, MessageCategory } from '../themes';
+import { DatabaseEntity, Purgeable } from '../../database/types';
+import { repository } from '../../database/repository';
+import { getThemeMessage, MessageCategory } from '../../themes';
 import { ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 
 // Base interface for intel content

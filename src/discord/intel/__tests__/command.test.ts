@@ -12,7 +12,7 @@ jest.mock('../types', () => ({
 }));
 
 // Mock the themes
-jest.mock('../../themes', () => ({
+jest.mock('../../../themes', () => ({
   getThemeMessage: jest.fn(() => ({ text: 'Test message' })),
   MessageCategory: {
     SUCCESS: 'SUCCESS',
