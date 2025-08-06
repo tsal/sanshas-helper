@@ -5,12 +5,12 @@
  * All themes must implement the same MessageCategory structure and ordering.
  */
 
-import { BaseTheme, ThemeModule } from '../base';
+import { createStandardTheme } from '../base';
 import { MessageCategory } from '../types';
 
 /**
- * Theme module using standard message collection pattern
- * All themes should follow this module delegation approach unless custom behavior is needed.
+ * Plain theme messages
+ * All themes should follow this pattern unless custom behavior is needed.
  * 
  * Custom implementations might be needed for:
  * - External API calls to fetch dynamic messages
@@ -18,10 +18,9 @@ import { MessageCategory } from '../types';
  * - Real-time message generation
  * - Integration with external services or databases
  * 
- * For standard static message collections like this one, module delegation is preferred.
+ * For standard static message collections like this one, the standard pattern is preferred.
  */
-const plainModule: ThemeModule = {
-  messages: {
+const plainMessages = {
     [MessageCategory.SUCCESS]: [
       { 
         text: 'Operation completed successfully.', 
@@ -128,19 +127,9 @@ const plainModule: ThemeModule = {
       { text: 'Farewell.', category: MessageCategory.FAREWELL },
       { text: 'Take care out there.', category: MessageCategory.FAREWELL }
     ]
-  }
 };
 
 /**
- * Theme implementation extending BaseTheme
- * Uses module delegation for standard behavior
+ * Plain theme implementation
  */
-export class PlainTheme extends BaseTheme {
-  readonly name = 'plain';
-
-  constructor() {
-    super(plainModule);
-  }
-}
-
-export const plainTheme = new PlainTheme();
+export const plainTheme = createStandardTheme('plain', plainMessages);

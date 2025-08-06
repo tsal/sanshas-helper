@@ -1,8 +1,7 @@
-import { BaseTheme, ThemeModule } from '../base';
+import { createStandardTheme } from '../base';
 import { MessageCategory } from '../types';
 
-const triglavModule: ThemeModule = {
-  messages: {
+const triglavMessages = {
   [MessageCategory.SUCCESS]: [
     {
       text: 'The proving trial concludes with acceptable parameters. Your adaptation flows forward.',
@@ -217,16 +216,7 @@ const triglavModule: ThemeModule = {
       category: MessageCategory.FAREWELL,
       context: 'bot_shutdown'
     }
-  ]
-  }
+    ]
 };
 
-export class TriglavTheme extends BaseTheme {
-  readonly name = 'triglav';
-
-  constructor() {
-    super(triglavModule);
-  }
-}
-
-export const triglavTheme = new TriglavTheme();
+export const triglavTheme = createStandardTheme('triglav', triglavMessages);

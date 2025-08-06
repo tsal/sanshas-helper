@@ -1,5 +1,5 @@
 /**
- * Theme system core interfaces and base implementation
+ * Theme system core interfaces and standard implementations
  * 
  * See plain/index.ts for detailed implementation example and patterns.
  */
@@ -7,17 +7,11 @@
 import { MessageCategory, ThemeMessage, MessageVariables, substituteMessageVariables } from './types';
 
 /**
- * Standard message collection interface for module delegation pattern
- */
-export interface ThemeModule {
-  messages: Record<MessageCategory, ThemeMessage[]>;
-}
-
-/**
- * Theme interface - extend BaseTheme to get implementations for free
+ * Theme interface
  */
 export interface Theme {
   readonly name: string;
+  messages: Record<MessageCategory, ThemeMessage[]>;
   getRandomMessage(category: MessageCategory): ThemeMessage;
   getMessagesByCategory(category: MessageCategory): ThemeMessage[];
   getMessageWithContent(category: MessageCategory, context?: string, content?: string): ThemeMessage;
@@ -26,53 +20,54 @@ export interface Theme {
 }
 
 /**
- * Base implementation with module delegation support
- * Extend this class and provide a ThemeModule for standard behavior
+ * Standard implementation for getRandomMessage
  */
-export abstract class BaseTheme implements Theme {
-  abstract readonly name: string;
-  protected module?: ThemeModule | undefined;
-
-  constructor(module?: ThemeModule | undefined) {
-    this.module = module;
-  }
-
-  getRandomMessage(category: MessageCategory): ThemeMessage {
-    if (this.module) {
-      const messages = this.module.messages[category];
-      if (!messages || messages.length === 0) {
-        return {
-          text: 'No message available for this category.',
-          category,
-          context: 'fallback'
-        };
-      }
-      
-      const randomIndex = Math.floor(Math.random() * messages.length);
-      return messages[randomIndex];
+export function createGetRandomMessage(messages: Record<MessageCategory, ThemeMessage[]>) {
+  return (category: MessageCategory): ThemeMessage => {
+    const categoryMessages = messages[category];
+    if (!categoryMessages || categoryMessages.length === 0) {
+      return {
+        text: 'No message available for this category.',
+        category,
+        context: 'fallback'
+      };
     }
-    throw new Error(`Theme ${this.name} must implement getRandomMessage or provide a module`);
-  }
+    
+    const randomIndex = Math.floor(Math.random() * categoryMessages.length);
+    return categoryMessages[randomIndex];
+  };
+}
 
-  getMessagesByCategory(category: MessageCategory): ThemeMessage[] {
-    if (this.module) {
-      return this.module.messages[category] || [];
-    }
-    throw new Error(`Theme ${this.name} must implement getMessagesByCategory or provide a module`);
-  }
+/**
+ * Standard implementation for getMessagesByCategory
+ */
+export function createGetMessagesByCategory(messages: Record<MessageCategory, ThemeMessage[]>) {
+  return (category: MessageCategory): ThemeMessage[] => {
+    return messages[category] || [];
+  };
+}
 
-  getRandomMessageByContext(category: MessageCategory, context: string): ThemeMessage {
-    const messages = this.getMessagesByCategory(category);
+/**
+ * Standard implementation for getRandomMessageByContext
+ */
+export function createGetRandomMessageByContext(getMessagesByCategory: (category: MessageCategory) => ThemeMessage[], getRandomMessage: (category: MessageCategory) => ThemeMessage) {
+  return (category: MessageCategory, context: string): ThemeMessage => {
+    const messages = getMessagesByCategory(category);
     const contextMessages = messages.filter(msg => msg.context === context);
     if (contextMessages.length > 0) {
       const randomIndex = Math.floor(Math.random() * contextMessages.length);
       return contextMessages[randomIndex];
     }
-    return this.getRandomMessage(category);
-  }
+    return getRandomMessage(category);
+  };
+}
 
-  getMessageWithVariablesByContext(category: MessageCategory, variables: MessageVariables, context: string): ThemeMessage {
-    const messages = this.getMessagesByCategory(category);
+/**
+ * Standard implementation for getMessageWithVariablesByContext
+ */
+export function createGetMessageWithVariablesByContext(getMessagesByCategory: (category: MessageCategory) => ThemeMessage[], getRandomMessage: (category: MessageCategory) => ThemeMessage) {
+  return (category: MessageCategory, variables: MessageVariables, context: string): ThemeMessage => {
+    const messages = getMessagesByCategory(category);
     const contextMessages = messages.filter(msg => msg.context === context);
     if (contextMessages.length > 0) {
       const randomIndex = Math.floor(Math.random() * contextMessages.length);
@@ -82,16 +77,21 @@ export abstract class BaseTheme implements Theme {
         text: substituteMessageVariables(message.text, variables)
       };
     }
-    return this.getRandomMessage(category);
-  }
+    return getRandomMessage(category);
+  };
+}
 
-  getMessageWithContent(category: MessageCategory, context?: string, content?: string): ThemeMessage {
+/**
+ * Standard implementation for getMessageWithContent
+ */
+export function createGetMessageWithContent(getRandomMessageByContext: (category: MessageCategory, context: string) => ThemeMessage, getRandomMessage: (category: MessageCategory) => ThemeMessage) {
+  return (category: MessageCategory, context?: string, content?: string): ThemeMessage => {
     let message: ThemeMessage;
     
     if (context) {
-      message = this.getRandomMessageByContext(category, context);
+      message = getRandomMessageByContext(category, context);
     } else {
-      message = this.getRandomMessage(category);
+      message = getRandomMessage(category);
     }
     
     if (content) {
@@ -102,5 +102,26 @@ export abstract class BaseTheme implements Theme {
     }
     
     return message;
-  }
+  };
+}
+
+/**
+ * Helper to create a standard theme with all default implementations
+ */
+export function createStandardTheme(name: string, messages: Record<MessageCategory, ThemeMessage[]>): Theme {
+  const getRandomMessage = createGetRandomMessage(messages);
+  const getMessagesByCategory = createGetMessagesByCategory(messages);
+  const getRandomMessageByContext = createGetRandomMessageByContext(getMessagesByCategory, getRandomMessage);
+  const getMessageWithVariablesByContext = createGetMessageWithVariablesByContext(getMessagesByCategory, getRandomMessage);
+  const getMessageWithContent = createGetMessageWithContent(getRandomMessageByContext, getRandomMessage);
+
+  return {
+    name,
+    messages,
+    getRandomMessage,
+    getMessagesByCategory,
+    getRandomMessageByContext,
+    getMessageWithVariablesByContext,
+    getMessageWithContent
+  };
 }

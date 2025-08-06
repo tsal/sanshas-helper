@@ -1,8 +1,7 @@
-import { BaseTheme, ThemeModule } from '../base';
+import { createStandardTheme } from '../base';
 import { MessageCategory } from '../types';
 
-const kuvakeiModule: ThemeModule = {
-  messages: {
+const kuvakeiMessages = {
   [MessageCategory.SUCCESS]: [
     {
       text: 'The neural pathways converge... the pattern grows stronger.',
@@ -224,16 +223,7 @@ const kuvakeiModule: ThemeModule = {
       category: MessageCategory.FAREWELL,
       context: 'bot_shutdown'
     }
-  ]
-  }
+    ]
 };
 
-export class KuvakeiTheme extends BaseTheme {
-  readonly name = 'kuvakei';
-
-  constructor() {
-    super(kuvakeiModule);
-  }
-}
-
-export const kuvakeiTheme = new KuvakeiTheme();
+export const kuvakeiTheme = createStandardTheme('kuvakei', kuvakeiMessages);
