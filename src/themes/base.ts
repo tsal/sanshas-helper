@@ -8,6 +8,17 @@
 import { MessageCategory, ThemeMessage, MessageVariables, substituteMessageVariables } from './types';
 
 /**
+ * Interface for standardized theme message modules
+ * Enables code reuse for themes with standard message collection patterns
+ */
+export interface ThemeModule<T extends ThemeMessage = ThemeMessage> {
+  /**
+   * Message collection mapping categories to arrays of themed messages
+   */
+  messages: Record<MessageCategory, T[]>;
+}
+
+/**
  * Interface that all themes must implement
  * Provides a consistent API for retrieving themed messages
  */
@@ -66,8 +77,53 @@ export interface Theme {
  */
 export abstract class BaseTheme implements Theme {
   abstract readonly name: string;
-  abstract getRandomMessage(category: MessageCategory): ThemeMessage;
-  abstract getMessagesByCategory(category: MessageCategory): ThemeMessage[];
+
+  /**
+   * Optional module for themes using standard message collection patterns
+   * When provided, eliminates need for custom getRandomMessage/getMessagesByCategory implementations
+   */
+  protected module?: ThemeModule | undefined;
+
+  /**
+   * Creates theme with optional module support
+   * @param module - Optional ThemeModule for standard message collection pattern
+   */
+  constructor(module?: ThemeModule | undefined) {
+    this.module = module;
+  }
+
+  /**
+   * Default implementation using module if available
+   * Subclasses can override for custom behavior
+   */
+  getRandomMessage(category: MessageCategory): ThemeMessage {
+    if (this.module) {
+      const messages = this.module.messages[category];
+      if (!messages || messages.length === 0) {
+        // Fallback message if category is empty
+        return {
+          text: 'No message available for this category.',
+          category,
+          context: 'fallback'
+        };
+      }
+      
+      const randomIndex = Math.floor(Math.random() * messages.length);
+      return messages[randomIndex];
+    }
+    throw new Error(`Theme ${this.name} must implement getRandomMessage or provide a module`);
+  }
+
+  /**
+   * Default implementation using module if available
+   * Subclasses can override for custom behavior
+   */
+  getMessagesByCategory(category: MessageCategory): ThemeMessage[] {
+    if (this.module) {
+      return this.module.messages[category] || [];
+    }
+    throw new Error(`Theme ${this.name} must implement getMessagesByCategory or provide a module`);
+  }
 
   /**
    * Retrieves a random message from a specific context within a category

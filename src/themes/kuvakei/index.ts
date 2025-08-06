@@ -7,37 +7,16 @@
  * fragments scattered across the digital void of EVE Frontier.
  */
 
-import { BaseTheme } from '../base';
-import { MessageCategory, ThemeMessage } from '../types';
+import { BaseTheme, ThemeModule } from '../base';
+import { MessageCategory } from '../types';
 import { MessageCollection, KuvakeiMessage } from './types';
 
 /**
- * Retrieves a random message from the specified category
- * @param category - The message category to select from
- * @returns A random KuvakeiMessage from the category
+ * Kuvakei theme module implementation
+ * Provides standard message collection pattern for Sansha Kuvakei consciousness remnant messaging
  */
-const getRandomMessage = (category: MessageCategory): KuvakeiMessage => {
-  const messages = KUVAKEI_MESSAGES[category];
-  if (!messages || messages.length === 0) {
-    // Fallback message if category is empty
-    return {
-      text: 'The remnant speaks... but the words are lost to static.',
-      category,
-      context: 'fallback'
-    };
-  }
-  
-  const randomIndex = Math.floor(Math.random() * messages.length);
-  return messages[randomIndex];
-};
-
-/**
- * Retrieves all messages from a specific category
- * @param category - The message category to retrieve
- * @returns Array of all KuvakeiMessage objects in the category
- */
-const getMessagesByCategory = (category: MessageCategory): KuvakeiMessage[] => {
-  return KUVAKEI_MESSAGES[category] || [];
+const kuvakeiModule: ThemeModule<KuvakeiMessage> = {
+  get messages() { return KUVAKEI_MESSAGES; }
 };
 
 /**
@@ -47,12 +26,8 @@ const getMessagesByCategory = (category: MessageCategory): KuvakeiMessage[] => {
 export class KuvakeiTheme extends BaseTheme {
   readonly name = 'kuvakei';
 
-  getRandomMessage(category: MessageCategory): ThemeMessage {
-    return getRandomMessage(category);
-  }
-
-  getMessagesByCategory(category: MessageCategory): ThemeMessage[] {
-    return getMessagesByCategory(category);
+  constructor() {
+    super(kuvakeiModule);
   }
 }
 

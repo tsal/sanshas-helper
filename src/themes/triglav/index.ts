@@ -11,6 +11,7 @@ import { BaseTheme } from '../base';
 import { MessageCategory, ThemeMessage } from '../types';
 import { MessageCollection, TriglavMessage, TroikaAspect } from './types';
 
+// Custom implementations
 /**
  * Retrieves a random message from the specified category
  * @param category - The message category to select from

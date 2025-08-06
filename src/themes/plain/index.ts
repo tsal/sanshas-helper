@@ -5,35 +5,16 @@
  * Perfect for riders who prefer simple, professional communication in EVE Frontier.
  */
 
-import { BaseTheme } from '../base';
-import { MessageCategory, ThemeMessage } from '../types';
+import { BaseTheme, ThemeModule } from '../base';
+import { MessageCategory } from '../types';
 import { PlainMessage, MessageCollection } from './types';
 
 /**
- * Retrieves a random message from the specified category
- * @param category - The message category to select from
- * @returns A random PlainMessage from the category
+ * Plain theme module implementation
+ * Provides standard message collection pattern for simple, straightforward messaging
  */
-const getRandomMessage = (category: MessageCategory): PlainMessage => {
-  const messages = PLAIN_MESSAGES[category];
-  if (!messages || messages.length === 0) {
-    return {
-      text: 'No message available.',
-      category
-    };
-  }
-  
-  const randomIndex = Math.floor(Math.random() * messages.length);
-  return messages[randomIndex];
-};
-
-/**
- * Retrieves all messages from a specific category
- * @param category - The message category to retrieve
- * @returns Array of all PlainMessage objects in the category
- */
-const getMessagesByCategory = (category: MessageCategory): PlainMessage[] => {
-  return PLAIN_MESSAGES[category] || [];
+const plainModule: ThemeModule<PlainMessage> = {
+  get messages() { return PLAIN_MESSAGES; }
 };
 
 /**
@@ -43,12 +24,8 @@ const getMessagesByCategory = (category: MessageCategory): PlainMessage[] => {
 export class PlainTheme extends BaseTheme {
   readonly name = 'plain';
 
-  getRandomMessage(category: MessageCategory): ThemeMessage {
-    return getRandomMessage(category);
-  }
-
-  getMessagesByCategory(category: MessageCategory): ThemeMessage[] {
-    return getMessagesByCategory(category);
+  constructor() {
+    super(plainModule);
   }
 }
 
