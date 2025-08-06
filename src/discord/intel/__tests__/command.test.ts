@@ -122,7 +122,7 @@ describe('Intel Command', () => {
       expect(mockStoreIntelItem).toHaveBeenCalledWith(
         '123456789012345678',
         expect.objectContaining({
-          id: expect.stringMatching(/^rift-\d+-[a-z0-9]+$/),
+          id: expect.stringMatching(/^rift-[a-z0-9]+$/),
           timestamp: expect.any(String),
           reporter: 'user123',
           content: {

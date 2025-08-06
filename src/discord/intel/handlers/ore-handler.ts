@@ -6,7 +6,7 @@ import { OreIntelItem, IntelEntity } from '../types';
  * Handler for ore intel type
  * Manages ore site intelligence reports including resource locations and types
  */
-export class OreIntelTypeHandler implements IntelTypeHandler<OreIntelItem> {
+export class OreIntelTypeHandler extends IntelTypeHandler<OreIntelItem> {
   readonly type = 'ore';
   readonly description = 'Add an ore site intel report';
 
@@ -43,10 +43,6 @@ export class OreIntelTypeHandler implements IntelTypeHandler<OreIntelItem> {
       systemName: system,
       near
     };
-  }
-
-  generateId(): string {
-    return `ore-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
 
   createEmbed(entity: IntelEntity): EmbedBuilder {

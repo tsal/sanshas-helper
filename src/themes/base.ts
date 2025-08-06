@@ -91,7 +91,15 @@ function findBestMessageWithVariables(
     return noVariableMessages[randomIndex];
   }
   
-  // 3. Fall back to any message in the category
+  // 3. Fall back to any message in the category, prioritizing ones without variables
+  const noVariableMessagesInCategory = allCategoryMessages.filter(msg => !msg.variables || msg.variables.length === 0);
+  
+  if (noVariableMessagesInCategory.length > 0) {
+    const randomIndex = Math.floor(Math.random() * noVariableMessagesInCategory.length);
+    return noVariableMessagesInCategory[randomIndex];
+  }
+  
+  // 4. Final fallback to any message in the category
   const randomIndex = Math.floor(Math.random() * allCategoryMessages.length);
   return allCategoryMessages[randomIndex];
 }
