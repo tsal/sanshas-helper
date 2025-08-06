@@ -5,14 +5,20 @@
  * (Kuvakei and Triglav) while preserving their unique characteristics.
  */
 
-import { MessageCategory as KuvakeiMessageCategory } from './kuvakei/types';
-
 /**
- * Unified message category enum that both themes share
- * Using Kuvakei as the base since both enums are identical
+ * Message categories for themed messages
+ * Unified enum that all themes share
  */
-export const MessageCategory = KuvakeiMessageCategory;
-export type MessageCategory = KuvakeiMessageCategory;
+export enum MessageCategory {
+  SUCCESS = 'success',
+  ERROR = 'error',
+  ROLE_ASSIGNMENT = 'role_assignment',
+  ROLE_REMOVAL = 'role_removal',
+  ACKNOWLEDGMENT = 'acknowledgment',
+  WARNING = 'warning',
+  GREETING = 'greeting',
+  FAREWELL = 'farewell'
+}
 
 /**
  * Type for variable substitution data
@@ -22,7 +28,7 @@ export type MessageVariables = Record<string, string>;
 
 /**
  * Common interface for themed messages
- * This represents the minimal structure that both KuvakeiMessage and TriglavMessage share
+ * This represents the unified structure that all themes share
  * 
  * Context Protocol:
  * - Context should be simple snake_case words (e.g., 'task_completion', 'general_error')
@@ -39,6 +45,21 @@ export interface ThemeMessage {
   context?: string;
   /** Optional list of variable names this message expects for substitution */
   variables?: string[];
+}
+
+/**
+ * Collection of messages organized by category
+ * Unified type that all themes can use instead of theme-specific collections
+ */
+export interface MessageCollection {
+  [MessageCategory.SUCCESS]: ThemeMessage[];
+  [MessageCategory.ERROR]: ThemeMessage[];
+  [MessageCategory.ROLE_ASSIGNMENT]: ThemeMessage[];
+  [MessageCategory.ROLE_REMOVAL]: ThemeMessage[];
+  [MessageCategory.ACKNOWLEDGMENT]: ThemeMessage[];
+  [MessageCategory.WARNING]: ThemeMessage[];
+  [MessageCategory.GREETING]: ThemeMessage[];
+  [MessageCategory.FAREWELL]: ThemeMessage[];
 }
 
 /**

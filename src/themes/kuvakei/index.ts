@@ -1,28 +1,10 @@
-/**
- * Kuvakei module - Thematic messaging system with digital remnant consciousness
- * 
- * This module contains the fragmented voice of Sansha Kuvakei's digital echo,
- * a ghost in the machine that speaks through neural networks and data streams.
- * The messages reflect the consciousness of a once-great leader now reduced to
- * fragments scattered across the digital void of EVE Frontier.
- */
-
 import { BaseTheme, ThemeModule } from '../base';
-import { MessageCategory } from '../types';
-import { MessageCollection, KuvakeiMessage } from './types';
+import { MessageCategory, MessageCollection } from '../types';
 
-/**
- * Kuvakei theme module implementation
- * Provides standard message collection pattern for Sansha Kuvakei consciousness remnant messaging
- */
-const kuvakeiModule: ThemeModule<KuvakeiMessage> = {
+const kuvakeiModule: ThemeModule = {
   get messages() { return KUVAKEI_MESSAGES; }
 };
 
-/**
- * Kuvakei theme implementation
- * Provides Sansha Kuvakei consciousness remnant messaging
- */
 export class KuvakeiTheme extends BaseTheme {
   readonly name = 'kuvakei';
 
@@ -31,10 +13,6 @@ export class KuvakeiTheme extends BaseTheme {
   }
 }
 
-/**
- * Thematic message strings from the fragmented consciousness of Sansha Kuvakei
- * A digital remnant, echo of echoes, speaking through the neural networks of EVE Frontier
- */
 const KUVAKEI_MESSAGES: MessageCollection = {
   [MessageCategory.SUCCESS]: [
     {
@@ -260,7 +238,4 @@ const KUVAKEI_MESSAGES: MessageCollection = {
   ]
 };
 
-// Export singleton instance
 export const kuvakeiTheme = new KuvakeiTheme();
-
-export * from './types';

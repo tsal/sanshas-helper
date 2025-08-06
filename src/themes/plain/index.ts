@@ -1,25 +1,24 @@
 /**
- * Plain theme module - Simple, straightforward messaging for riders
+ * Plain theme - Reference implementation for all themes
  * 
- * This module provides clear, direct messages without dramatic flair or lore references.
- * Perfect for riders who prefer simple, professional communication in EVE Frontier.
+ * This theme serves as the example showing the required structure and patterns.
+ * All themes must implement the same MessageCategory structure and ordering.
  */
 
 import { BaseTheme, ThemeModule } from '../base';
-import { MessageCategory } from '../types';
-import { PlainMessage, MessageCollection } from './types';
+import { MessageCategory, MessageCollection } from '../types';
 
 /**
- * Plain theme module implementation
- * Provides standard message collection pattern for simple, straightforward messaging
+ * Theme module using standard message collection pattern
+ * All themes should follow this module delegation approach
  */
-const plainModule: ThemeModule<PlainMessage> = {
+const plainModule: ThemeModule = {
   get messages() { return PLAIN_MESSAGES; }
 };
 
 /**
- * Plain theme implementation
- * Provides clear, direct messages without lore
+ * Theme implementation extending BaseTheme
+ * Uses module delegation for standard behavior
  */
 export class PlainTheme extends BaseTheme {
   readonly name = 'plain';
@@ -30,7 +29,11 @@ export class PlainTheme extends BaseTheme {
 }
 
 /**
- * Collection of plain messages organized by category
+ * Message collection - all themes must implement all categories in this exact order:
+ * SUCCESS, ERROR, ROLE_ASSIGNMENT, ROLE_REMOVAL, ACKNOWLEDGMENT, WARNING, GREETING, FAREWELL
+ * 
+ * Context is optional snake_case identifier for message selection.
+ * Variables array lists placeholder names for {variable} substitution.
  */
 const PLAIN_MESSAGES: MessageCollection = {
   [MessageCategory.SUCCESS]: [
@@ -141,7 +144,4 @@ const PLAIN_MESSAGES: MessageCollection = {
   ]
 };
 
-// Export singleton instance
 export const plainTheme = new PlainTheme();
-
-export * from './types';

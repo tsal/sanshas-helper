@@ -11,11 +11,11 @@ import { MessageCategory, ThemeMessage, MessageVariables, substituteMessageVaria
  * Interface for standardized theme message modules
  * Enables code reuse for themes with standard message collection patterns
  */
-export interface ThemeModule<T extends ThemeMessage = ThemeMessage> {
+export interface ThemeModule {
   /**
    * Message collection mapping categories to arrays of themed messages
    */
-  messages: Record<MessageCategory, T[]>;
+  messages: Record<MessageCategory, ThemeMessage[]>;
 }
 
 /**
