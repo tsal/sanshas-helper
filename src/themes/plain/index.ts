@@ -10,15 +10,9 @@ import { MessageCategory } from '../types';
 
 /**
  * Plain theme messages
- * All themes should follow this pattern unless custom behavior is needed.
  * 
- * Custom implementations might be needed for:
- * - External API calls to fetch dynamic messages
- * - Complex context handling beyond simple filtering
- * - Real-time message generation
- * - Integration with external services or databases
- * 
- * For standard static message collections like this one, the standard pattern is preferred.
+ * This object defines the message collections for each MessageCategory.
+ * All themes must implement the same MessageCategory structure and ordering.
  */
 const plainMessages = {
     [MessageCategory.SUCCESS]: [
@@ -32,6 +26,18 @@ const plainMessages = {
         category: MessageCategory.SUCCESS,
         context: 'success_action'
       },
+      { 
+        text: 'Stored {itemCount} {itemType} items to {location} successfully.', 
+        category: MessageCategory.SUCCESS,
+        context: 'storage_success',
+        variables: ['itemCount', 'itemType', 'location']
+        // Example usage: plainTheme.getMessageWithVariablesByContext(
+        //   MessageCategory.SUCCESS, 
+        //   { itemCount: '42', itemType: 'ore', location: 'cargo bay' }, 
+        //   'storage_success'
+        // )
+        // Result: "Stored 42 ore items to cargo bay successfully."
+      },
       { text: 'Done.', category: MessageCategory.SUCCESS },
       { text: 'Successfully completed.', category: MessageCategory.SUCCESS },
       { text: 'Operation successful.', category: MessageCategory.SUCCESS }
@@ -42,7 +48,12 @@ const plainMessages = {
       { text: 'Something went wrong.', category: MessageCategory.ERROR, context: 'operation_error' },
       { text: 'Error: Operation failed.', category: MessageCategory.ERROR, context: 'operation_error' },
       { text: 'Unable to complete the request.', category: MessageCategory.ERROR, context: 'operation_error' },
-      { text: 'System error encountered.', category: MessageCategory.ERROR, context: 'operation_error' }
+      { 
+        text: 'System error encountered: {errorCode}.', 
+        category: MessageCategory.ERROR, 
+        context: 'system_error',
+        variables: ['errorCode']
+      }
     ],
 
     [MessageCategory.ROLE_ASSIGNMENT]: [
@@ -91,7 +102,12 @@ const plainMessages = {
       { text: 'Understood.', category: MessageCategory.ACKNOWLEDGMENT },
       { text: 'Roger that.', category: MessageCategory.ACKNOWLEDGMENT },
       { text: 'Confirmed.', category: MessageCategory.ACKNOWLEDGMENT },
-      { text: 'Got it.', category: MessageCategory.ACKNOWLEDGMENT }
+      { 
+        text: 'Got it, {username}.', 
+        category: MessageCategory.ACKNOWLEDGMENT,
+        context: 'user_ack',
+        variables: ['username']
+      }
     ],
 
     [MessageCategory.WARNING]: [
@@ -99,7 +115,12 @@ const plainMessages = {
       { text: 'Caution: Invalid operation attempted.', category: MessageCategory.WARNING },
       { text: 'Alert: System limitation encountered.', category: MessageCategory.WARNING },
       { text: 'Notice: Action requires verification.', category: MessageCategory.WARNING },
-      { text: 'Warning: Proceed with caution.', category: MessageCategory.WARNING }
+      { 
+        text: 'Warning: {action} may cause issues.', 
+        category: MessageCategory.WARNING,
+        context: 'action_warning',
+        variables: ['action']
+      }
     ],
 
     [MessageCategory.GREETING]: [
@@ -125,11 +146,34 @@ const plainMessages = {
       { text: 'Safe travels.', category: MessageCategory.FAREWELL },
       { text: 'Until next time.', category: MessageCategory.FAREWELL },
       { text: 'Farewell.', category: MessageCategory.FAREWELL },
-      { text: 'Take care out there.', category: MessageCategory.FAREWELL }
+      { 
+        text: 'Take care out there, {username}.', 
+        category: MessageCategory.FAREWELL,
+        context: 'personal_farewell',
+        variables: ['username']
+      }
     ]
 };
 
 /**
  * Plain theme implementation
+ * 
+ * Uses createStandardTheme helper which expects:
+ * - name: string - unique theme identifier
+ * - messages: Record<MessageCategory, ThemeMessage[]> - message collections for each category
+ * 
+ * Each MessageCategory must contain an array of ThemeMessage objects with:
+ * - text: string - the message text (may contain {variable} placeholders)
+ * - category: MessageCategory - must match the parent category
+ * - context?: string - optional context identifier for filtering
+ * - variables?: string[] - array of variable names used in text placeholders
+ * 
+ * Custom implementations might be needed for:
+ * - External API calls to fetch dynamic messages
+ * - Complex context handling beyond simple filtering
+ * - Real-time message generation
+ * - Integration with external services or databases
+ * 
+ * For standard static message collections like this one, createStandardTheme is preferred.
  */
 export const plainTheme = createStandardTheme('plain', plainMessages);
