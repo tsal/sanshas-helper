@@ -27,6 +27,51 @@ const triglavMessages = {
       text: 'Your essence has proven adaptable. The Troika evolves through your contribution.',
       category: MessageCategory.SUCCESS,
       context: 'success_action'
+    },
+    {
+      text: 'The collective archives receive your {itemCount} {itemType} offerings. The Troika preserves all.',
+      category: MessageCategory.SUCCESS,
+      context: 'storage_success',
+      variables: ['itemCount', 'itemType']
+    },
+    {
+      text: 'Bioadaptive storage protocols engage. Your intel essence flows into the collective memory.',
+      category: MessageCategory.SUCCESS,
+      context: 'storage_success'
+    },
+    {
+      text: 'The proving chambers stand empty. No trials await your examination.',
+      category: MessageCategory.SUCCESS,
+      context: 'no_items'
+    },
+    {
+      text: 'Void resonance detected. The collective holds no records matching your inquiry.',
+      category: MessageCategory.SUCCESS,
+      context: 'no_items'
+    },
+    {
+      text: 'The Troika reveals {totalItems} fragments of collected wisdom. Your convergence unfolds.',
+      category: MessageCategory.SUCCESS,
+      context: 'list_summary',
+      variables: ['totalItems']
+    },
+    {
+      text: 'Bioadaptive archives yield {totalItems} intel patterns for your examination.',
+      category: MessageCategory.SUCCESS,
+      context: 'list_summary',
+      variables: ['totalItems']
+    },
+    {
+      text: 'The collective archives overflow with {totalItems} fragments. Only {displayedItems} patterns manifest within the viewing constraints. {droppedItems} older fragments remain concealed in the temporal depths.',
+      category: MessageCategory.SUCCESS,
+      context: 'list_summary',
+      variables: ['totalItems', 'displayedItems', 'droppedItems']
+    },
+    {
+      text: 'Bioadaptive limits engage: {displayedItems} of {totalItems} intel essences displayed across {actualPages} viewing cycles. {droppedItems} ancient patterns slip beyond the convergence threshold.',
+      category: MessageCategory.SUCCESS,
+      context: 'list_summary',
+      variables: ['totalItems', 'displayedItems', 'droppedItems', 'actualPages']
     }
   ],
 
