@@ -4,7 +4,6 @@
 export enum MessageCategory {
   SUCCESS = 'success',
   ERROR = 'error',
-  INITIALIZATION = 'initialization',
   ROLE_ASSIGNMENT = 'role_assignment',
   ROLE_REMOVAL = 'role_removal',
   ACKNOWLEDGMENT = 'acknowledgment',
@@ -23,6 +22,8 @@ export interface PlainMessage {
   category: MessageCategory;
   /** Optional context for when this message should be used */
   context?: string;
+  /** Optional list of variable names this message expects for substitution */
+  variables?: string[];
 }
 
 /**
@@ -31,7 +32,6 @@ export interface PlainMessage {
 export interface MessageCollection {
   [MessageCategory.SUCCESS]: PlainMessage[];
   [MessageCategory.ERROR]: PlainMessage[];
-  [MessageCategory.INITIALIZATION]: PlainMessage[];
   [MessageCategory.ROLE_ASSIGNMENT]: PlainMessage[];
   [MessageCategory.ROLE_REMOVAL]: PlainMessage[];
   [MessageCategory.ACKNOWLEDGMENT]: PlainMessage[];

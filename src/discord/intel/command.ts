@@ -194,7 +194,7 @@ export class IntelCommandHandler implements IntelCommand {
       const successMessage = handler.getSuccessMessage(content);
       
       await interaction.reply({ 
-        content: getThemeMessage(MessageCategory.SUCCESS, successMessage).text,
+        content: getThemeMessage(MessageCategory.SUCCESS, 'storage_success', successMessage).text,
         embeds: [embed],
         flags: MessageFlags.Ephemeral
       });
@@ -280,7 +280,7 @@ export class IntelCommandHandler implements IntelCommand {
   ): Promise<void> {
     if (items.length === 0) {
       await interaction.reply({
-        content: getThemeMessage(MessageCategory.SUCCESS, 'No intel items found.').text,
+        content: getThemeMessage(MessageCategory.SUCCESS, 'no_items', 'No intel items found.').text,
         embeds: [],
         flags: MessageFlags.Ephemeral
       });
@@ -316,7 +316,7 @@ export class IntelCommandHandler implements IntelCommand {
         // First page uses reply()
         messagePromises.push(
           interaction.reply({
-            content: getThemeMessage(MessageCategory.SUCCESS, summary).text,
+            content: getThemeMessage(MessageCategory.SUCCESS, 'list_summary', summary).text,
             embeds: embeds,
             flags: MessageFlags.Ephemeral
           })
@@ -325,7 +325,7 @@ export class IntelCommandHandler implements IntelCommand {
         // Additional pages use followUp()
         messagePromises.push(
           interaction.followUp({
-            content: getThemeMessage(MessageCategory.SUCCESS, summary).text,
+            content: getThemeMessage(MessageCategory.SUCCESS, 'list_summary', summary).text,
             embeds: embeds,
             flags: MessageFlags.Ephemeral
           })
@@ -392,7 +392,7 @@ export class IntelCommandHandler implements IntelCommand {
    */
   private async sendErrorResponse(interaction: ChatInputCommandInteraction, message: string): Promise<void> {
     await interaction.reply({
-      content: getThemeMessage(MessageCategory.ERROR, message).text,
+      content: getThemeMessage(MessageCategory.ERROR, 'operation_error', message).text,
       flags: MessageFlags.Ephemeral
     });
   }

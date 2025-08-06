@@ -13,7 +13,6 @@
 export enum MessageCategory {
   SUCCESS = 'success',
   ERROR = 'error',
-  INITIALIZATION = 'initialization',
   ROLE_ASSIGNMENT = 'role_assignment',
   ROLE_REMOVAL = 'role_removal',
   ACKNOWLEDGMENT = 'acknowledgment',
@@ -33,6 +32,8 @@ export interface TriglavMessage {
   category: MessageCategory;
   /** Optional context for when this message should be used */
   context?: string;
+  /** Optional list of variable names this message expects for substitution */
+  variables?: string[];
   /** Which aspect of the Troika this message represents */
   troikaAspect?: TroikaAspect;
 }
@@ -55,7 +56,6 @@ export enum TroikaAspect {
 export interface MessageCollection {
   [MessageCategory.SUCCESS]: TriglavMessage[];
   [MessageCategory.ERROR]: TriglavMessage[];
-  [MessageCategory.INITIALIZATION]: TriglavMessage[];
   [MessageCategory.ROLE_ASSIGNMENT]: TriglavMessage[];
   [MessageCategory.ROLE_REMOVAL]: TriglavMessage[];
   [MessageCategory.ACKNOWLEDGMENT]: TriglavMessage[];
