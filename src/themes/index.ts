@@ -6,7 +6,7 @@
  */
 
 import { getBotConfig } from '../config';
-import { ThemeMessage, MessageCategory } from './types';
+import { ThemeMessage, MessageCategory, MessageVariables } from './types';
 import { Theme } from './base';
 import { themeRegistry } from './loader';
 import { kuvakeiTheme } from './kuvakei';
@@ -47,14 +47,13 @@ const getActiveTheme = (): Theme => {
 /**
  * Retrieves a themed message based on the current RESPONSE_THEME configuration
  * @param category - The message category to select from
- * @param context - Optional context to filter by
+ * @param context - Optional context pattern to filter by
+ * @param content - Optional dynamic content to be displayed with the themed message
  * @returns A ThemeMessage matching the criteria from the configured theme
  */
-export const getThemeMessage = (category: MessageCategory, context?: string): ThemeMessage => {
+export const getThemeMessage = (category: MessageCategory, context?: string, content?: string): ThemeMessage => {
   const theme = getActiveTheme();
-  return context 
-    ? theme.getMessageByContext(category, context)
-    : theme.getRandomMessage(category);
+  return theme.getMessageWithContent(category, context, content);
 };
 
 /**
@@ -67,11 +66,26 @@ export const getRandomThemeMessage = (category: MessageCategory): ThemeMessage =
 };
 
 /**
- * Retrieves a themed message by category and context
+ * Retrieves a random themed message from a specific context within a category
  * @param category - The message category to select from
- * @param context - The context to filter by
- * @returns A ThemeMessage matching the criteria, or random from category if context not found
+ * @param context - The context to filter by (snake_case word)
+ * @returns A random ThemeMessage from the specified context, or random from category if context not found
  */
-export const getThemeMessageByContext = (category: MessageCategory, context: string): ThemeMessage => {
-  return getThemeMessage(category, context);
+export const getRandomThemeMessageByContext = (category: MessageCategory, context: string): ThemeMessage => {
+  const theme = getActiveTheme();
+  return theme.getRandomMessageByContext(category, context);
 };
+
+/**
+ * Retrieves a themed message with variable substitution from a specific context within a category
+ * @param category - The message category to select from
+ * @param variables - Variables to substitute in the message
+ * @param context - The context to filter by (snake_case word)
+ * @returns A ThemeMessage with variables substituted from the specified context, or from category if context not found
+ */
+export const getThemeMessageWithVariablesByContext = (category: MessageCategory, variables: MessageVariables, context: string): ThemeMessage => {
+  const theme = getActiveTheme();
+  return theme.getMessageWithVariablesByContext(category, variables, context);
+};
+
+

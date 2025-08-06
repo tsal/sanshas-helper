@@ -12,7 +12,7 @@ jest.mock('../types', () => ({
 }));
 
 // Mock the themes
-jest.mock('../../themes', () => ({
+jest.mock('../../../themes', () => ({
   getThemeMessage: jest.fn(() => ({ text: 'Test message' })),
   MessageCategory: {
     SUCCESS: 'SUCCESS',
@@ -122,7 +122,7 @@ describe('Intel Command', () => {
       expect(mockStoreIntelItem).toHaveBeenCalledWith(
         '123456789012345678',
         expect.objectContaining({
-          id: expect.stringMatching(/^rift-\d+-[a-z0-9]+$/),
+          id: expect.stringMatching(/^rift-[a-z0-9]+$/),
           timestamp: expect.any(String),
           reporter: 'user123',
           content: {

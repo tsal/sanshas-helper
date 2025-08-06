@@ -1,23 +1,47 @@
 import { IntelTypeRegistry } from '../registry';
 import { IntelTypeHandler } from '../types';
 import { IntelContentType } from '../../types';
+import { ChatInputCommandInteraction, EmbedBuilder } from 'discord.js';
 
 // Mock intel content type for testing
 interface MockIntelItem extends IntelContentType {
   testField: string;
 }
 
+// Create a minimal mock handler class for testing
+class MockHandler extends IntelTypeHandler<MockIntelItem> {
+  readonly type: string;
+  readonly description: string;
+
+  constructor(type: string) {
+    super();
+    this.type = type;
+    this.description = `Mock ${type} handler`;
+  }
+
+  getCommandOptions() {
+    return [];
+  }
+
+  parseInteractionData(_interaction: ChatInputCommandInteraction): MockIntelItem {
+    return { testField: 'test' };
+  }
+
+  createEmbed(): EmbedBuilder {
+    return { toJSON: () => ({}) } as any;
+  }
+
+  isOfType(_content: unknown): _content is MockIntelItem {
+    return true;
+  }
+
+  getSuccessMessage(): string {
+    return `${this.type} added`;
+  }
+}
+
 // Create a minimal mock handler for testing
-const createMockHandler = (type: string): IntelTypeHandler<MockIntelItem> => ({
-  type,
-  description: `Mock ${type} handler`,
-  getCommandOptions: () => [],
-  parseInteractionData: () => ({ testField: 'test' }),
-  generateId: () => `${type}-test-id`,
-  createEmbed: () => ({ toJSON: () => ({}) } as any),
-  isOfType: (_content: unknown): _content is MockIntelItem => true,
-  getSuccessMessage: () => `${type} added`
-});
+const createMockHandler = (type: string): IntelTypeHandler<MockIntelItem> => new MockHandler(type);
 
 describe('IntelTypeRegistry', () => {
   let registry: IntelTypeRegistry;
@@ -81,5 +105,21 @@ describe('IntelTypeRegistry', () => {
     // Act & Assert
     expect(registry.isSupportedType('supported')).toBe(true);
     expect(registry.isSupportedType('unsupported')).toBe(false);
+  });
+
+  it('should generate unique IDs between multiple handler instances', () => {
+    // Arrange
+    const handler1 = createMockHandler('unique');
+    const handler2 = createMockHandler('unique');
+    
+    // Act - Generate multiple IDs from both instances
+    const ids = new Set<string>();
+    for (let i = 0; i < 100; i++) {
+      ids.add(handler1.generateId());
+      ids.add(handler2.generateId());
+    }
+    
+    // Assert - All IDs should be unique (no collisions)
+    expect(ids.size).toBe(200); // 100 IDs from each handler = 200 unique IDs
   });
 });

@@ -6,7 +6,7 @@ import { FleetIntelItem, IntelEntity } from '../types';
  * Handler for fleet intel type
  * Manages fleet intelligence reports including tribe identification and composition
  */
-export class FleetIntelTypeHandler implements IntelTypeHandler<FleetIntelItem> {
+export class FleetIntelTypeHandler extends IntelTypeHandler<FleetIntelItem> {
   readonly type = 'fleet';
   readonly description = 'Add a fleet intel report';
 
@@ -49,10 +49,6 @@ export class FleetIntelTypeHandler implements IntelTypeHandler<FleetIntelItem> {
       near,
       standing
     };
-  }
-
-  generateId(): string {
-    return `fleet-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
 
   createEmbed(entity: IntelEntity): EmbedBuilder {

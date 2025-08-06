@@ -6,7 +6,7 @@ import { SiteIntelItem, IntelEntity } from '../types';
  * Handler for site intel type
  * Manages investigation and combat site intelligence reports
  */
-export class SiteIntelTypeHandler implements IntelTypeHandler<SiteIntelItem> {
+export class SiteIntelTypeHandler extends IntelTypeHandler<SiteIntelItem> {
   readonly type = 'site';
   readonly description = 'Add a site intel report';
 
@@ -53,10 +53,6 @@ export class SiteIntelTypeHandler implements IntelTypeHandler<SiteIntelItem> {
     }
 
     return siteData;
-  }
-
-  generateId(): string {
-    return `site-${Date.now()}`;
   }
 
   createEmbed(intel: IntelEntity): EmbedBuilder {

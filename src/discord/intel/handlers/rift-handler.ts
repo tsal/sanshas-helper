@@ -6,7 +6,7 @@ import { RiftIntelItem, IntelEntity } from '../types';
  * Handler for rift intel type
  * Manages rift intelligence reports including wormhole anomalies and space rifts
  */
-export class RiftIntelTypeHandler implements IntelTypeHandler<RiftIntelItem> {
+export class RiftIntelTypeHandler extends IntelTypeHandler<RiftIntelItem> {
   readonly type = 'rift';
   readonly description = 'Add a rift intel report';
 
@@ -37,10 +37,6 @@ export class RiftIntelTypeHandler implements IntelTypeHandler<RiftIntelItem> {
       systemName: system,
       near
     };
-  }
-
-  generateId(): string {
-    return `rift-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
 
   createEmbed(entity: IntelEntity): EmbedBuilder {

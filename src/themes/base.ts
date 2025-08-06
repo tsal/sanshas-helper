@@ -1,64 +1,179 @@
 /**
- * Base theme interface and types for the messaging system
+ * Theme system core interfaces and standard implementations
  * 
- * This module defines the contract that all themes must implement,
- * ensuring consistent behavior and easy extensibility.
+ * See plain/index.ts for detailed implementation example and patterns.
  */
 
-import { MessageCategory, ThemeMessage } from './types';
+import { MessageCategory, ThemeMessage, MessageVariables, substituteMessageVariables } from './types';
 
 /**
- * Interface that all themes must implement
- * Provides a consistent API for retrieving themed messages
+ * Theme interface
  */
 export interface Theme {
-  /**
-   * The unique name/identifier of this theme
-   */
   readonly name: string;
-
-  /**
-   * Retrieves a random message from the specified category
-   * @param category - The message category to select from
-   * @returns A ThemeMessage from the category
-   */
+  messages: Record<MessageCategory, ThemeMessage[]>;
   getRandomMessage(category: MessageCategory): ThemeMessage;
-
-  /**
-   * Retrieves a message by category and optional context
-   * @param category - The message category to select from
-   * @param context - Optional context to filter by
-   * @returns A ThemeMessage matching the criteria, or random from category if context not found
-   */
-  getMessageByContext(category: MessageCategory, context?: string): ThemeMessage;
-
-  /**
-   * Retrieves all messages from a specific category
-   * @param category - The message category to retrieve
-   * @returns Array of all ThemeMessage objects in the category
-   */
   getMessagesByCategory(category: MessageCategory): ThemeMessage[];
+  getMessageWithContent(category: MessageCategory, context?: string, content?: string): ThemeMessage;
+  getRandomMessageByContext(category: MessageCategory, context: string): ThemeMessage;
+  getMessageWithVariablesByContext(category: MessageCategory, variables: MessageVariables, context: string): ThemeMessage;
 }
 
 /**
- * Abstract base class that provides common theme functionality
- * Themes can extend this for convenience or implement Theme interface directly
+ * Standard implementation for getRandomMessage
  */
-export abstract class BaseTheme implements Theme {
-  abstract readonly name: string;
-  abstract getRandomMessage(category: MessageCategory): ThemeMessage;
-  abstract getMessageByContext(category: MessageCategory, context?: string): ThemeMessage;
-  abstract getMessagesByCategory(category: MessageCategory): ThemeMessage[];
+export function createGetRandomMessage(messages: Record<MessageCategory, ThemeMessage[]>) {
+  return (category: MessageCategory): ThemeMessage => {
+    const categoryMessages = messages[category];
+    if (!categoryMessages || categoryMessages.length === 0) {
+      return {
+        text: 'No message available for this category.',
+        category,
+        context: 'fallback'
+      };
+    }
+    
+    const randomIndex = Math.floor(Math.random() * categoryMessages.length);
+    return categoryMessages[randomIndex];
+  };
+}
 
-  /**
-   * Helper method to convert theme-specific message objects to ThemeMessage
-   * Useful for themes that have additional properties beyond the base interface
-   */
-  protected normalizeMessage(message: any): ThemeMessage {
-    return {
-      text: message.text,
-      category: message.category,
-      context: message.context
-    };
+/**
+ * Standard implementation for getMessagesByCategory
+ */
+export function createGetMessagesByCategory(messages: Record<MessageCategory, ThemeMessage[]>) {
+  return (category: MessageCategory): ThemeMessage[] => {
+    return messages[category] || [];
+  };
+}
+
+/**
+ * Standard implementation for getRandomMessageByContext
+ */
+export function createGetRandomMessageByContext(getMessagesByCategory: (category: MessageCategory) => ThemeMessage[], getRandomMessage: (category: MessageCategory) => ThemeMessage) {
+  return (category: MessageCategory, context: string): ThemeMessage => {
+    const messages = getMessagesByCategory(category);
+    const contextMessages = messages.filter(msg => msg.context === context);
+    if (contextMessages.length > 0) {
+      const randomIndex = Math.floor(Math.random() * contextMessages.length);
+      return contextMessages[randomIndex];
+    }
+    return getRandomMessage(category);
+  };
+}
+
+/**
+ * Helper function to find the best message when variables may not align
+ * Handles robust fallback logic for variable matching
+ */
+function findBestMessageWithVariables(
+  contextMessages: ThemeMessage[],
+  providedVariables: MessageVariables,
+  allCategoryMessages: ThemeMessage[]
+): ThemeMessage {
+  // 1. Try to find a message in context with matching variables
+  const viableVariableMessages = contextMessages.filter(msg => 
+    msg.variables && msg.variables.every(varName => 
+      providedVariables[varName] !== undefined && providedVariables[varName] !== ''
+    )
+  );
+  
+  if (viableVariableMessages.length > 0) {
+    const randomIndex = Math.floor(Math.random() * viableVariableMessages.length);
+    return viableVariableMessages[randomIndex];
   }
+  
+  // 2. Try to find a message without variables in same context
+  const noVariableMessages = contextMessages.filter(msg => !msg.variables || msg.variables.length === 0);
+  
+  if (noVariableMessages.length > 0) {
+    const randomIndex = Math.floor(Math.random() * noVariableMessages.length);
+    return noVariableMessages[randomIndex];
+  }
+  
+  // 3. Fall back to any message in the category, prioritizing ones without variables
+  const noVariableMessagesInCategory = allCategoryMessages.filter(msg => !msg.variables || msg.variables.length === 0);
+  
+  if (noVariableMessagesInCategory.length > 0) {
+    const randomIndex = Math.floor(Math.random() * noVariableMessagesInCategory.length);
+    return noVariableMessagesInCategory[randomIndex];
+  }
+  
+  // 4. Final fallback to any message in the category
+  const randomIndex = Math.floor(Math.random() * allCategoryMessages.length);
+  return allCategoryMessages[randomIndex];
+}
+
+/**
+ * Standard implementation for getMessageWithVariablesByContext
+ */
+export function createGetMessageWithVariablesByContext(getMessagesByCategory: (category: MessageCategory) => ThemeMessage[], getRandomMessage: (category: MessageCategory) => ThemeMessage) {
+  return (category: MessageCategory, variables: MessageVariables, context: string): ThemeMessage => {
+    const allCategoryMessages = getMessagesByCategory(category);
+    const contextMessages = allCategoryMessages.filter(msg => msg.context === context);
+    
+    if (contextMessages.length > 0) {
+      const selectedMessage = findBestMessageWithVariables(contextMessages, variables, allCategoryMessages);
+      
+      // Only apply variable substitution if the message actually has variables and they match
+      if (selectedMessage.variables && selectedMessage.variables.every(varName => 
+        variables[varName] !== undefined && variables[varName] !== ''
+      )) {
+        return {
+          ...selectedMessage,
+          text: substituteMessageVariables(selectedMessage.text, variables)
+        };
+      }
+      
+      // Return message as-is if no variables needed or variables don't match
+      return selectedMessage;
+    }
+    
+    return getRandomMessage(category);
+  };
+}
+
+/**
+ * Standard implementation for getMessageWithContent
+ */
+export function createGetMessageWithContent(getRandomMessageByContext: (category: MessageCategory, context: string) => ThemeMessage, getRandomMessage: (category: MessageCategory) => ThemeMessage) {
+  return (category: MessageCategory, context?: string, content?: string): ThemeMessage => {
+    let message: ThemeMessage;
+    
+    if (context) {
+      message = getRandomMessageByContext(category, context);
+    } else {
+      message = getRandomMessage(category);
+    }
+    
+    if (content) {
+      return {
+        ...message,
+        text: `${message.text} ${content}`
+      };
+    }
+    
+    return message;
+  };
+}
+
+/**
+ * Helper to create a standard theme with all default implementations
+ */
+export function createStandardTheme(name: string, messages: Record<MessageCategory, ThemeMessage[]>): Theme {
+  const getRandomMessage = createGetRandomMessage(messages);
+  const getMessagesByCategory = createGetMessagesByCategory(messages);
+  const getRandomMessageByContext = createGetRandomMessageByContext(getMessagesByCategory, getRandomMessage);
+  const getMessageWithVariablesByContext = createGetMessageWithVariablesByContext(getMessagesByCategory, getRandomMessage);
+  const getMessageWithContent = createGetMessageWithContent(getRandomMessageByContext, getRandomMessage);
+
+  return {
+    name,
+    messages,
+    getRandomMessage,
+    getMessagesByCategory,
+    getRandomMessageByContext,
+    getMessageWithVariablesByContext,
+    getMessageWithContent
+  };
 }

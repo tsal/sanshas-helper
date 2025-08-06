@@ -7,11 +7,29 @@ import {
   Message,
   InteractionResponse
 } from 'discord.js';
-import { getThemeMessage, MessageCategory } from '../themes';
+import { getThemeMessage, getThemeMessageWithVariablesByContext, MessageCategory } from '../../themes';
 import { IntelEntity, RiftIntelItem, isRiftIntelItem, OreIntelItem, isOreIntelItem, FleetIntelItem, isFleetIntelItem, SiteIntelItem, isSiteIntelItem, IntelItem, storeIntelItem, deleteIntelByIdFromInteraction } from './types';
-import { repository } from '../database/repository';
+import { repository } from '../../database/repository';
 import { IntelTypeRegistry } from './handlers/registry';
 import { IntelTypeHandler } from './handlers/types';
+
+/**
+ * Variables for basic intel list summary (normal pagination)
+ */
+interface BasicListVariables {
+  totalItems: string;
+  pageInfo?: string;
+}
+
+/**
+ * Variables for enhanced intel list summary (page limit hit with dropped items)
+ */
+interface EnhancedListVariables {
+  totalItems: string;
+  displayedItems: string;
+  droppedItems: string;
+  actualPages: string;
+}
 
 /**
  * Intel command interface for Discord interactions
@@ -194,7 +212,7 @@ export class IntelCommandHandler implements IntelCommand {
       const successMessage = handler.getSuccessMessage(content);
       
       await interaction.reply({ 
-        content: getThemeMessage(MessageCategory.SUCCESS, successMessage).text,
+        content: getThemeMessage(MessageCategory.SUCCESS, 'storage_success', successMessage).text,
         embeds: [embed],
         flags: MessageFlags.Ephemeral
       });
@@ -280,7 +298,7 @@ export class IntelCommandHandler implements IntelCommand {
   ): Promise<void> {
     if (items.length === 0) {
       await interaction.reply({
-        content: getThemeMessage(MessageCategory.SUCCESS, 'No intel items found.').text,
+        content: getThemeMessage(MessageCategory.SUCCESS, 'no_items').text,
         embeds: [],
         flags: MessageFlags.Ephemeral
       });
@@ -299,6 +317,12 @@ export class IntelCommandHandler implements IntelCommand {
     const maxEmbeds = 10;
     const totalPages = Math.ceil(sortedItems.length / maxEmbeds);
     const actualPages = Math.min(requestedPages, totalPages);
+
+    // Calculate enhanced context variables
+    const displayedItems = Math.min(actualPages * maxEmbeds, sortedItems.length);
+    const droppedItems = sortedItems.length - displayedItems;
+    const maxPagesReached = requestedPages > 10;
+    const hasMorePages = totalPages > actualPages;
     
     // Create messages for each page and collect message responses
     const messagePromises: Array<Promise<Message | InteractionResponse>> = [];
@@ -309,14 +333,38 @@ export class IntelCommandHandler implements IntelCommand {
       const pageItems = sortedItems.slice(startIndex, endIndex);
       const embeds = pageItems.map(item => this.createIntelEmbed(item));
       
+      // Enhanced messaging logic
+      let messageContent: string;
       const pageInfo = actualPages > 1 ? ` (Page ${pageIndex + 1}/${actualPages})` : '';
-      const summary = `Found ${sortedItems.length} intel item${sortedItems.length === 1 ? '' : 's'}${pageInfo}.`;
+
+      if (hasMorePages && maxPagesReached) {
+        // Scenario: Hit page limit with items dropped
+        const variables: EnhancedListVariables = {
+          totalItems: sortedItems.length.toString(),
+          displayedItems: displayedItems.toString(),
+          droppedItems: droppedItems.toString(),
+          actualPages: actualPages.toString()
+        };
+        messageContent = getThemeMessageWithVariablesByContext(MessageCategory.SUCCESS, variables as unknown as Record<string, string>, 'list_summary').text;
+      } else {
+        // Scenario: Normal listing
+        const variables: BasicListVariables = {
+          totalItems: sortedItems.length.toString()
+        };
+        
+        // Only include pageInfo if we have multiple pages
+        if (pageInfo) {
+          variables.pageInfo = pageInfo;
+        }
+        
+        messageContent = getThemeMessageWithVariablesByContext(MessageCategory.SUCCESS, variables as unknown as Record<string, string>, 'list_summary').text;
+      }
       
       if (pageIndex === 0) {
         // First page uses reply()
         messagePromises.push(
           interaction.reply({
-            content: getThemeMessage(MessageCategory.SUCCESS, summary).text,
+            content: messageContent,
             embeds: embeds,
             flags: MessageFlags.Ephemeral
           })
@@ -325,7 +373,7 @@ export class IntelCommandHandler implements IntelCommand {
         // Additional pages use followUp()
         messagePromises.push(
           interaction.followUp({
-            content: getThemeMessage(MessageCategory.SUCCESS, summary).text,
+            content: messageContent,
             embeds: embeds,
             flags: MessageFlags.Ephemeral
           })
@@ -392,7 +440,7 @@ export class IntelCommandHandler implements IntelCommand {
    */
   private async sendErrorResponse(interaction: ChatInputCommandInteraction, message: string): Promise<void> {
     await interaction.reply({
-      content: getThemeMessage(MessageCategory.ERROR, message).text,
+      content: getThemeMessage(MessageCategory.ERROR, 'operation_error', message).text,
       flags: MessageFlags.Ephemeral
     });
   }
