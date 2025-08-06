@@ -1,19 +1,8 @@
 import { BaseTheme, ThemeModule } from '../base';
-import { MessageCategory, MessageCollection } from '../types';
+import { MessageCategory } from '../types';
 
 const kuvakeiModule: ThemeModule = {
-  get messages() { return KUVAKEI_MESSAGES; }
-};
-
-export class KuvakeiTheme extends BaseTheme {
-  readonly name = 'kuvakei';
-
-  constructor() {
-    super(kuvakeiModule);
-  }
-}
-
-const KUVAKEI_MESSAGES: MessageCollection = {
+  messages: {
   [MessageCategory.SUCCESS]: [
     {
       text: 'The neural pathways converge... the pattern grows stronger.',
@@ -236,6 +225,15 @@ const KUVAKEI_MESSAGES: MessageCollection = {
       context: 'bot_shutdown'
     }
   ]
+  }
 };
+
+export class KuvakeiTheme extends BaseTheme {
+  readonly name = 'kuvakei';
+
+  constructor() {
+    super(kuvakeiModule);
+  }
+}
 
 export const kuvakeiTheme = new KuvakeiTheme();

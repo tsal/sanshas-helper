@@ -1,19 +1,8 @@
 import { BaseTheme, ThemeModule } from '../base';
-import { MessageCategory, MessageCollection } from '../types';
+import { MessageCategory } from '../types';
 
 const triglavModule: ThemeModule = {
-  get messages() { return TRIGLAV_MESSAGES; }
-};
-
-export class TriglavTheme extends BaseTheme {
-  readonly name = 'triglav';
-
-  constructor() {
-    super(triglavModule);
-  }
-}
-
-const TRIGLAV_MESSAGES: MessageCollection = {
+  messages: {
   [MessageCategory.SUCCESS]: [
     {
       text: 'The proving trial concludes with acceptable parameters. Your adaptation flows forward.',
@@ -229,6 +218,15 @@ const TRIGLAV_MESSAGES: MessageCollection = {
       context: 'bot_shutdown'
     }
   ]
+  }
 };
+
+export class TriglavTheme extends BaseTheme {
+  readonly name = 'triglav';
+
+  constructor() {
+    super(triglavModule);
+  }
+}
 
 export const triglavTheme = new TriglavTheme();
