@@ -63,20 +63,64 @@ export function createGetRandomMessageByContext(getMessagesByCategory: (category
 }
 
 /**
+ * Helper function to find the best message when variables may not align
+ * Handles robust fallback logic for variable matching
+ */
+function findBestMessageWithVariables(
+  contextMessages: ThemeMessage[],
+  providedVariables: MessageVariables,
+  allCategoryMessages: ThemeMessage[]
+): ThemeMessage {
+  // 1. Try to find a message in context with matching variables
+  const viableVariableMessages = contextMessages.filter(msg => 
+    msg.variables && msg.variables.every(varName => 
+      providedVariables[varName] !== undefined && providedVariables[varName] !== ''
+    )
+  );
+  
+  if (viableVariableMessages.length > 0) {
+    const randomIndex = Math.floor(Math.random() * viableVariableMessages.length);
+    return viableVariableMessages[randomIndex];
+  }
+  
+  // 2. Try to find a message without variables in same context
+  const noVariableMessages = contextMessages.filter(msg => !msg.variables || msg.variables.length === 0);
+  
+  if (noVariableMessages.length > 0) {
+    const randomIndex = Math.floor(Math.random() * noVariableMessages.length);
+    return noVariableMessages[randomIndex];
+  }
+  
+  // 3. Fall back to any message in the category
+  const randomIndex = Math.floor(Math.random() * allCategoryMessages.length);
+  return allCategoryMessages[randomIndex];
+}
+
+/**
  * Standard implementation for getMessageWithVariablesByContext
  */
 export function createGetMessageWithVariablesByContext(getMessagesByCategory: (category: MessageCategory) => ThemeMessage[], getRandomMessage: (category: MessageCategory) => ThemeMessage) {
   return (category: MessageCategory, variables: MessageVariables, context: string): ThemeMessage => {
-    const messages = getMessagesByCategory(category);
-    const contextMessages = messages.filter(msg => msg.context === context);
+    const allCategoryMessages = getMessagesByCategory(category);
+    const contextMessages = allCategoryMessages.filter(msg => msg.context === context);
+    
     if (contextMessages.length > 0) {
-      const randomIndex = Math.floor(Math.random() * contextMessages.length);
-      const message = contextMessages[randomIndex];
-      return {
-        ...message,
-        text: substituteMessageVariables(message.text, variables)
-      };
+      const selectedMessage = findBestMessageWithVariables(contextMessages, variables, allCategoryMessages);
+      
+      // Only apply variable substitution if the message actually has variables and they match
+      if (selectedMessage.variables && selectedMessage.variables.every(varName => 
+        variables[varName] !== undefined && variables[varName] !== ''
+      )) {
+        return {
+          ...selectedMessage,
+          text: substituteMessageVariables(selectedMessage.text, variables)
+        };
+      }
+      
+      // Return message as-is if no variables needed or variables don't match
+      return selectedMessage;
     }
+    
     return getRandomMessage(category);
   };
 }

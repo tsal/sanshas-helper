@@ -38,6 +38,11 @@ const plainMessages = {
         // )
         // Result: "Stored 42 ore items to cargo bay successfully."
       },
+      { 
+        text: 'Storage operation completed.', 
+        category: MessageCategory.SUCCESS,
+        context: 'storage_success'
+      },
       { text: 'Done.', category: MessageCategory.SUCCESS },
       { text: 'Successfully completed.', category: MessageCategory.SUCCESS },
       { text: 'Operation successful.', category: MessageCategory.SUCCESS }
