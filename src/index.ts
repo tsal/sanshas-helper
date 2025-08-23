@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, REST, Routes } from 'discord.js';
+import { Client, GatewayIntentBits, REST, Routes, MessageFlags } from 'discord.js';
 import * as dotenv from 'dotenv';
 import { ensureAllRoles } from './discord';
 import { roleCommand } from './discord/roles';
@@ -238,7 +238,7 @@ client.on('interactionCreate', async (interaction): Promise<void> => {
       if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
         await interaction.reply({
           content: 'An error occurred while processing your request.',
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
     } catch (replyError) {
