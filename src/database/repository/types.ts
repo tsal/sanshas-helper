@@ -40,11 +40,12 @@ export interface Repository {
     guildId: string
   ): Promise<T[]>;
 
-  /**
+    /**
    * Remove stale objects that implement Purgeable interface
    * @param EntityClass - The entity class to purge
    * @param guildId - Guild ID to purge from
-   * @param maxAgeHours - Maximum age in hours (default 24)
+   * @param maxAgeHours - Maximum age in hours (default 168)
+   * @returns Promise that resolves to the number of items purged
    */
   purgeStaleItems<T extends import('../types').DatabaseObject & import('../types').Purgeable>(
     EntityClass: new (...args: any[]) => T,

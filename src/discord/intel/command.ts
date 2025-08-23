@@ -8,10 +8,11 @@ import {
   InteractionResponse
 } from 'discord.js';
 import { getThemeMessage, getThemeMessageWithVariablesByContext, MessageCategory } from '../../themes';
-import { IntelEntity, RiftIntelItem, isRiftIntelItem, OreIntelItem, isOreIntelItem, FleetIntelItem, isFleetIntelItem, SiteIntelItem, isSiteIntelItem, IntelItem, storeIntelItem, deleteIntelByIdFromInteraction } from './types';
+import { IntelEntity, RiftIntelItem, isRiftIntelItem, OreIntelItem, isOreIntelItem, FleetIntelItem, isFleetIntelItem, SiteIntelItem, isSiteIntelItem, IntelItem, storeIntelItem, deleteIntelByIdFromInteraction, notifyIntelChannel } from './types';
 import { repository } from '../../database/repository';
 import { IntelTypeRegistry } from './handlers/registry';
 import { IntelTypeHandler } from './handlers/types';
+import { getBotConfig } from '../../config';
 
 /**
  * Variables for basic intel list summary (normal pagination)
@@ -217,6 +218,9 @@ export class IntelCommandHandler implements IntelCommand {
         flags: MessageFlags.Ephemeral
       });
 
+      // Notify the intel channel after successful user reply
+      await notifyIntelChannel(interaction, embed);
+
       // Set timer to delete the ephemeral message after 30 seconds (skip in test environment)
       if (process.env.NODE_ENV !== 'test') {
         setTimeout(async () => {
@@ -279,7 +283,8 @@ export class IntelCommandHandler implements IntelCommand {
    * @returns Number of items purged
    */
   private async purgeStaleIntel(guildId: string): Promise<number> {
-    const purgedCount = await repository.purgeStaleItems(IntelEntity, guildId, 24);
+    const config = getBotConfig();
+    const purgedCount = await repository.purgeStaleItems(IntelEntity, guildId, config.defaultIntelExpiration);
     return purgedCount;
   }
 

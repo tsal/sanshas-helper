@@ -392,10 +392,10 @@ describe('Repository Integration Tests', () => {
     });
 
     describe('purgeStaleItems', () => {
-      it('should remove items older than 24 hours (default)', async () => {
+      it('should remove items older than 168 hours (default)', async () => {
         const now = new Date();
         const fresh = new Date(now.getTime() - 23 * 60 * 60 * 1000); // 23 hours ago
-        const stale = new Date(now.getTime() - 25 * 60 * 60 * 1000); // 25 hours ago
+        const stale = new Date(now.getTime() - 180 * 60 * 60 * 1000); // 180 hours ago
 
         const freshEntity = new IntelEntity(testGuildId, {
           id: 'fresh-intel',
@@ -453,9 +453,9 @@ describe('Repository Integration Tests', () => {
 
       it('should return correct count of purged items', async () => {
         const now = new Date();
-        const stale1 = new Date(now.getTime() - 25 * 60 * 60 * 1000);
-        const stale2 = new Date(now.getTime() - 26 * 60 * 60 * 1000);
-        const stale3 = new Date(now.getTime() - 27 * 60 * 60 * 1000);
+        const stale1 = new Date(now.getTime() - 180 * 60 * 60 * 1000);
+        const stale2 = new Date(now.getTime() - 190 * 60 * 60 * 1000);
+        const stale3 = new Date(now.getTime() - 200 * 60 * 60 * 1000);
 
         const entities = [
           new IntelEntity(testGuildId, {
@@ -531,8 +531,8 @@ describe('Repository Integration Tests', () => {
       it('should handle mixed fresh and stale items', async () => {
         const now = new Date();
         const fresh = new Date(now.getTime() - 12 * 60 * 60 * 1000); // 12 hours ago
-        const stale1 = new Date(now.getTime() - 25 * 60 * 60 * 1000); // 25 hours ago
-        const stale2 = new Date(now.getTime() - 30 * 60 * 60 * 1000); // 30 hours ago
+        const stale1 = new Date(now.getTime() - 180 * 60 * 60 * 1000); // 180 hours ago
+        const stale2 = new Date(now.getTime() - 200 * 60 * 60 * 1000); // 200 hours ago
 
         const freshEntity = new IntelEntity(testGuildId, {
           id: 'fresh-intel',

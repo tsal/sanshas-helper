@@ -620,7 +620,7 @@ describe('Intel Types Module', () => {
       it('should participate in purge operations based on timestamp', async () => {
         const now = new Date();
         const fresh = new Date(now.getTime() - 12 * 60 * 60 * 1000); // 12 hours ago
-        const stale = new Date(now.getTime() - 36 * 60 * 60 * 1000); // 36 hours ago
+        const stale = new Date(now.getTime() - 180 * 60 * 60 * 1000); // 180 hours ago
         
         const freshItem: IntelItem = {
           id: 'fresh-intel',
