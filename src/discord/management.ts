@@ -1,4 +1,4 @@
-import { Guild, Role } from 'discord.js';
+import { Guild, Role, TextChannel, VoiceChannel, CategoryChannel, NewsChannel, StageChannel, ForumChannel, DirectoryChannel } from 'discord.js';
 import { RoleConfig, createRoleOptions, DEFAULT_ROLE_CONFIGS } from './types';
 import { getBotConfig } from '../config';
 
@@ -6,6 +6,11 @@ import { getBotConfig } from '../config';
  * Name of the bot's management role
  */
 const MANAGEMENT_ROLE_NAME = 'Sansha\'s Helper';
+
+/**
+ * Union type for Discord channels that can be found by name
+ */
+type GuildChannel = TextChannel | VoiceChannel | CategoryChannel | NewsChannel | StageChannel | ForumChannel | DirectoryChannel;
 
 /**
  * Checks if a role with the given name exists in the guild
@@ -18,6 +23,28 @@ export const findRoleByName = async (guild: Guild, roleName: string): Promise<Ro
   await guild.roles.fetch();
   
   return guild.roles.cache.find(role => role.name === roleName);
+};
+
+/**
+ * Finds a channel by partial name match (fuzzy search) in the guild
+ * @param guild - The Discord guild to search
+ * @param searchTerm - The search term to match against channel names (case-insensitive)
+ * @returns Promise that resolves to the first matching channel if found, undefined otherwise
+ */
+export const findChannelByName = async (guild: Guild, searchTerm: string): Promise<GuildChannel | undefined> => {
+  // Ensure the guild's channels are fully loaded
+  await guild.channels.fetch();
+  
+  // Convert search term to lowercase for case-insensitive matching
+  const searchTermLower = searchTerm.toLowerCase();
+  
+  // Find channels that contain the search term in their name
+  const matchingChannels = guild.channels.cache.filter(channel => {
+    return channel && channel.name && channel.name.toLowerCase().includes(searchTermLower);
+  });
+  
+  // Return the first match if any found
+  return matchingChannels.first() as GuildChannel | undefined;
 };
 
 /**

@@ -5,4 +5,4 @@
 
 export { roleCommand, RoleCommand, createRoleButtons } from './roles';
 export { fleetCommand, FleetCommand, createFleetButtons } from './fleets';
-export { checkManagementRole, ensureAllRoles } from './management';
+export { checkManagementRole, ensureAllRoles, findChannelByName } from './management';

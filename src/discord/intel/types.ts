@@ -1,7 +1,9 @@
 import { DatabaseEntity, Purgeable } from '../../database/types';
 import { repository } from '../../database/repository';
 import { getThemeMessage, MessageCategory } from '../../themes';
-import { ChatInputCommandInteraction, MessageFlags } from 'discord.js';
+import { ChatInputCommandInteraction, MessageFlags, EmbedBuilder } from 'discord.js';
+import { getBotConfig } from '../../config';
+import { findChannelByName } from '../management';
 
 // Base interface for intel content
 export interface IntelContentType {
@@ -187,4 +189,46 @@ export const deleteIntelByIdFromInteraction = async (
     content: successMessage.text,
     flags: MessageFlags.Ephemeral
   });
+};
+
+/**
+ * Sends a notification message to the configured intel channel
+ * @param interaction - Discord interaction for guild context
+ * @param embed - Pre-created embed to send to the channel
+ */
+export const notifyIntelChannel = async (
+  interaction: ChatInputCommandInteraction,
+  embed: EmbedBuilder
+): Promise<void> => {
+  try {
+    // Validate guild context
+    if (!interaction.guild) {
+      return;
+    }
+
+    // Get bot configuration for channel name
+    const config = getBotConfig();
+    
+    // Find the intel channel using fuzzy search
+    const intelChannel = await findChannelByName(interaction.guild, config.intelChannelName);
+    
+    // If no channel found, return silently
+    if (!intelChannel) {
+      return;
+    }
+
+    // Check if channel is text-based (can send messages)
+    if (!intelChannel.isTextBased()) {
+      return;
+    }
+
+    // Send the embed to the intel channel
+    await intelChannel.send({
+      embeds: [embed]
+    });
+
+  } catch (error) {
+    // Only log actual errors that indicate bot configuration problems
+    console.error('[Intel] Failed to send channel notification:', error);
+  }
 };

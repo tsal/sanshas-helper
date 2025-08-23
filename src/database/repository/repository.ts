@@ -202,13 +202,13 @@ class DatabaseRepository implements Repository {
    * Remove stale objects that implement Purgeable interface
    * @param EntityClass - The entity class to purge
    * @param guildId - Guild ID to purge from
-   * @param maxAgeHours - Maximum age in hours (default 24)
+   * @param maxAgeHours - Maximum age in hours (default 168)
    * @returns Number of items purged
    */
   async purgeStaleItems<T extends DatabaseObject & Purgeable>(
     EntityClass: new (...args: any[]) => T,
     guildId: string,
-    maxAgeHours: number = 24
+    maxAgeHours: number = 168
   ): Promise<number> {
     if (!this.isInitialized()) {
       return 0;
