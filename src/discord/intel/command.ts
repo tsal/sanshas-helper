@@ -12,6 +12,7 @@ import { IntelEntity, RiftIntelItem, isRiftIntelItem, OreIntelItem, isOreIntelIt
 import { repository } from '../../database/repository';
 import { IntelTypeRegistry } from './handlers/registry';
 import { IntelTypeHandler } from './handlers/types';
+import { getTypeFromIntelId, isValidIntelId } from './handlers/id-utils';
 import { getBotConfig } from '../../config';
 
 /**
@@ -113,12 +114,6 @@ export class IntelCommandHandler implements IntelCommand {
       subcommand
         .setName('del')
         .setDescription('Delete an intel report')
-        .addStringOption(option =>
-          option
-            .setName('type')
-            .setDescription('Intel type (e.g., rift)')
-            .setRequired(true)
-        )
         .addStringOption(option =>
           option
             .setName('id')
@@ -456,8 +451,20 @@ export class IntelCommandHandler implements IntelCommand {
    * @param guildId - Guild ID
    */
   private async handleDelSubcommand(interaction: ChatInputCommandInteraction, guildId: string): Promise<void> {
-    const type = interaction.options.getString('type', true);
     const id = interaction.options.getString('id', true);
+
+    // Validate ID format using helper function
+    if (!isValidIntelId(id)) {
+      await this.sendErrorResponse(interaction, 'Invalid ID format. Expected format: <type>-<id>');
+      return;
+    }
+
+    // Extract type from ID using helper function
+    const type = getTypeFromIntelId(id);
+    if (!type) {
+      await this.sendErrorResponse(interaction, 'Could not extract type from ID');
+      return;
+    }
 
     // Handle supported types: rift, ore, fleet, and site
     if (this.registry.isSupportedType(type)) {
