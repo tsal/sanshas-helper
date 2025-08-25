@@ -985,7 +985,7 @@ export class IntelCommandHandler implements IntelCommand {
             .setEmoji('❓')
         );
 
-      await buttonInteraction.reply({
+      await buttonInteraction.update({
         content: getThemeMessage(MessageCategory.ACKNOWLEDGMENT, 'input_request', 'Please select the site type:').text,
         components: [siteTypeRow1, siteTypeRow2]
       });
@@ -1002,37 +1002,6 @@ export class IntelCommandHandler implements IntelCommand {
         try {
           const selectedSiteType = siteTypeInteraction.customId.replace('site_type_', '');
           let siteName: string;
-
-          // Handle site name based on type
-          if (selectedSiteType === 'other') {
-            // Ask for custom site name
-            await siteTypeInteraction.reply({
-              content: getThemeMessage(MessageCategory.ACKNOWLEDGMENT, 'input_request', 'Please enter the custom site name:').text
-            });
-
-            // Wait for custom site name input
-            const siteNameMessage = await this.awaitUserMessage(siteTypeInteraction, 'site name');
-            if (!siteNameMessage) {
-              return; // Timeout or error handled in awaitUserMessage
-            }
-
-            siteName = siteNameMessage.content.trim();
-
-            // Clean up the custom name message
-            try {
-              await siteNameMessage.delete();
-            } catch (error) {
-              // Ignore deletion errors - not critical
-            }
-          } else {
-            // Use predefined site name
-            siteName = `${selectedSiteType.charAt(0).toUpperCase() + selectedSiteType.slice(1)} site`;
-            
-            await siteTypeInteraction.reply({
-              content: getThemeMessage(MessageCategory.ACKNOWLEDGMENT, 'input_request', 
-                `Site: **${siteName}**\n\nPlease select the triggered status:`).text
-            });
-          }
 
           // Present triggered status selection buttons
           const triggeredRow = new ActionRowBuilder<ButtonBuilder>()
@@ -1054,13 +1023,45 @@ export class IntelCommandHandler implements IntelCommand {
                 .setEmoji('❓')
             );
 
-          const triggeredMessage = await siteTypeInteraction.followUp({
-            content: selectedSiteType === 'other' ? 
-              getThemeMessage(MessageCategory.ACKNOWLEDGMENT, 'input_request', 
-                `Site: **${siteName}**\n\nPlease select the triggered status:`).text :
-              getThemeMessage(MessageCategory.ACKNOWLEDGMENT, 'input_request', 'Please select the triggered status:').text,
-            components: [triggeredRow]
-          });
+          // Handle site name based on type
+          if (selectedSiteType === 'other') {
+            // Ask for custom site name
+            await siteTypeInteraction.update({
+              content: getThemeMessage(MessageCategory.ACKNOWLEDGMENT, 'input_request', 'Please enter the custom site name:').text,
+              components: []
+            });
+
+            // Wait for custom site name input
+            const siteNameMessage = await this.awaitUserMessage(siteTypeInteraction, 'site name');
+            if (!siteNameMessage) {
+              return; // Timeout or error handled in awaitUserMessage
+            }
+
+            siteName = siteNameMessage.content.trim();
+
+            // Clean up the custom name message
+            try {
+              await siteNameMessage.delete();
+            } catch (error) {
+              // Ignore deletion errors - not critical
+            }
+
+            // Show triggered status selection after getting custom name
+            await buttonInteraction.editReply({
+              content: getThemeMessage(MessageCategory.ACKNOWLEDGMENT, 'input_request', 
+                `Site: **${siteName}**\n\nPlease select the triggered status:`).text,
+              components: [triggeredRow]
+            });
+          } else {
+            // Use predefined site name and move directly to triggered status
+            siteName = `${selectedSiteType.charAt(0).toUpperCase() + selectedSiteType.slice(1)} site`;
+            
+            await siteTypeInteraction.update({
+              content: getThemeMessage(MessageCategory.ACKNOWLEDGMENT, 'input_request', 
+                `Site: **${siteName}**\n\nPlease select the triggered status:`).text,
+              components: [triggeredRow]
+            });
+          }
 
           // Create collector for triggered status selection
           const triggeredCollector = buttonInteraction.channel?.createMessageComponentCollector({
@@ -1075,8 +1076,9 @@ export class IntelCommandHandler implements IntelCommand {
               const selectedTriggered = triggeredInteraction.customId.replace('site_triggered_', '');
               
               // Ask for system name
-              await triggeredInteraction.reply({
-                content: getThemeMessage(MessageCategory.ACKNOWLEDGMENT, 'input_request', 'Please enter the system name:').text
+              await triggeredInteraction.update({
+                content: getThemeMessage(MessageCategory.ACKNOWLEDGMENT, 'input_request', 'Please enter the system name:').text,
+                components: []
               });
 
               // Wait for system name input
@@ -1113,17 +1115,15 @@ export class IntelCommandHandler implements IntelCommand {
               const entity = new IntelEntity(guildId, intelItem);
               const embed = siteHandler.createEmbed(entity);
 
-              await triggeredInteraction.followUp({
+              await buttonInteraction.editReply({
                 content: getThemeMessage(MessageCategory.SUCCESS, undefined, 
                   `✅ Site intel stored successfully!\n**Site:** ${siteName}\n**Triggered:** ${selectedTriggered}\n**System:** ${systemName}`).text,
-                embeds: [embed]
+                embeds: [embed],
+                components: []
               });
 
               // Notify intel channel
               await notifyIntelChannel(triggeredInteraction as any, embed);
-
-              // Clean up messages
-              await this.cleanupMessages(triggeredInteraction);
 
               // Clean up user's system name message
               try {
@@ -1132,15 +1132,22 @@ export class IntelCommandHandler implements IntelCommand {
                 // Ignore deletion errors - not critical
               }
 
+              // Clean up success message after 10 seconds
+              setTimeout(async () => {
+                try {
+                  await buttonInteraction.deleteReply();
+                } catch (error) {
+                  // Ignore deletion errors - not critical
+                }
+              }, 10000);
+
             } catch (error) {
               console.error('[Intel] Error processing triggered status selection:', error);
               
-              if (!triggeredInteraction.replied && !triggeredInteraction.deferred) {
-                await triggeredInteraction.reply({
-                  content: getThemeMessage(MessageCategory.ERROR, 'operation_error', 'Error processing triggered status selection. Please try again.').text,
-                  flags: MessageFlags.Ephemeral
-                });
-              }
+              await buttonInteraction.editReply({
+                content: getThemeMessage(MessageCategory.ERROR, 'operation_error', 'Error processing triggered status selection. Please try again.').text,
+                components: []
+              });
             }
           });
 
@@ -1148,10 +1155,9 @@ export class IntelCommandHandler implements IntelCommand {
           triggeredCollector?.on('end', async (_collected: any, reason: string) => {
             if (reason === 'time') {
               try {
-                await triggeredMessage.delete();
-                await siteTypeInteraction.followUp({
+                await buttonInteraction.editReply({
                   content: getThemeMessage(MessageCategory.WARNING, 'timeout_warning', 'Triggered status selection timed out. Please run `/intel add` again to start over.').text,
-                  flags: MessageFlags.Ephemeral
+                  components: []
                 });
               } catch (error) {
                 // Ignore cleanup errors on timeout - not critical
@@ -1162,12 +1168,10 @@ export class IntelCommandHandler implements IntelCommand {
         } catch (error) {
           console.error('[Intel] Error processing site type selection:', error);
           
-          if (!siteTypeInteraction.replied && !siteTypeInteraction.deferred) {
-            await siteTypeInteraction.reply({
-              content: getThemeMessage(MessageCategory.ERROR, 'operation_error', 'Error processing site type selection. Please try again.').text,
-              flags: MessageFlags.Ephemeral
-            });
-          }
+          await buttonInteraction.editReply({
+            content: getThemeMessage(MessageCategory.ERROR, 'operation_error', 'Error processing site type selection. Please try again.').text,
+            components: []
+          });
         }
       });
 
@@ -1190,9 +1194,9 @@ export class IntelCommandHandler implements IntelCommand {
       console.error('[Intel] Error in site collection:', error);
       
       try {
-        await buttonInteraction.followUp({
+        await buttonInteraction.editReply({
           content: getThemeMessage(MessageCategory.ERROR, 'operation_error', 'Error setting up site intel collection. Please try again.').text,
-          flags: MessageFlags.Ephemeral
+          components: []
         });
       } catch (followUpError) {
         console.error('[Intel] Error sending error message:', followUpError);
@@ -1241,22 +1245,6 @@ export class IntelCommandHandler implements IntelCommand {
       }
       
       return null;
-    }
-  }
-
-  /**
-   * Clean up messages by deleting the original interaction message
-   * @param interaction - Button interaction to clean up
-   */
-  private async cleanupMessages(interaction: ButtonInteraction): Promise<void> {
-    try {
-      // Get the original message (the one with the type selection buttons)
-      const originalMessage = interaction.message;
-      if (originalMessage && 'delete' in originalMessage) {
-        await originalMessage.delete();
-      }
-    } catch (error) {
-      // Not critical, so we continue silently
     }
   }
 
