@@ -91,11 +91,11 @@ export class IntelCommandHandler implements IntelCommand {
       }
     }
 
-    // Add wizard-based add subcommand
+    // Add add subcommand
     command.addSubcommand(subcommand =>
       subcommand
         .setName('add')
-        .setDescription('Add an intelligence report using guided wizard')
+        .setDescription('Add an intelligence report')
     );
 
     // Add list subcommand (reusing original implementation)
@@ -185,7 +185,7 @@ export class IntelCommandHandler implements IntelCommand {
       return this.handleDelSubcommand(interaction, interaction.guildId);
     }
     
-    // Handle add subcommand (wizard-based intel creation)
+    // Handle add subcommand (intel creation)
     if (subcommand === 'add') {
       return this.handleAddSubcommand(interaction, interaction.guildId);
     }
@@ -500,61 +500,33 @@ export class IntelCommandHandler implements IntelCommand {
   }
 
   /**
-   * Get emoji for intel type
-   * @param type - Intel type name
-   * @returns Emoji string for the intel type
-   */
-  private getIntelTypeEmoji(type: string): string {
-    switch (type.toLowerCase()) {
-      case 'rift':
-        return '🌌';
-      case 'ore':
-        return '⛏️';
-      case 'fleet':
-        return '⚔️';
-      case 'site':
-      default:
-        return '🏗️';
-    }
-  }
-
-  /**
-   * Handle add subcommand - presents intel type selection wizard
+   * Handle add subcommand - presents intel type selection
    * @param interaction - Discord interaction object
    * @param guildId - Guild ID
    */
   private async handleAddSubcommand(interaction: ChatInputCommandInteraction, guildId: string): Promise<void> {
     try {
-      // Create buttons for each registered intel type
-      const buttons: ButtonBuilder[] = [];
-      const registeredTypes = this.registry.getRegisteredTypes();
-      
-      for (const type of registeredTypes) {
-        const handler = this.registry.getHandler(type);
-        if (handler) {
-          // Create emoji mapping for intel types
-          const emoji = this.getIntelTypeEmoji(type);
-          const button = new ButtonBuilder()
-            .setCustomId(`intel_add_${type}`)
-            .setLabel(`${emoji} ${type.charAt(0).toUpperCase() + type.slice(1)}`)
-            .setStyle(ButtonStyle.Secondary);
-          
-          buttons.push(button);
-        }
-      }
-
-      // Create action row(s) for buttons (max 5 per row)
-      const rows: ActionRowBuilder<ButtonBuilder>[] = [];
-      for (let i = 0; i < buttons.length; i += 5) {
-        const row = new ActionRowBuilder<ButtonBuilder>()
-          .addComponents(buttons.slice(i, i + 5));
-        rows.push(row);
-      }
+      // Create buttons for the 3 supported intel types
+      const typeRow = new ActionRowBuilder<ButtonBuilder>()
+        .addComponents(
+          new ButtonBuilder()
+            .setCustomId('intel_add_rift')
+            .setLabel('🌌 Rift')
+            .setStyle(ButtonStyle.Secondary),
+          new ButtonBuilder()
+            .setCustomId('intel_add_ore')
+            .setLabel('⛏️ Ore')
+            .setStyle(ButtonStyle.Secondary),
+          new ButtonBuilder()
+            .setCustomId('intel_add_site')
+            .setLabel('⚔️ Site')
+            .setStyle(ButtonStyle.Secondary)
+        );
 
       // Send non-ephemeral reply with type selection buttons
       await interaction.reply({
-        content: getThemeMessage(MessageCategory.GREETING, 'wizard_start', '🕵️ **Intel Wizard** - Select the type of intelligence to report:').text,
-        components: rows
+        content: getThemeMessage(MessageCategory.GREETING, 'wizard_start', 'Select intel type to report:').text,
+        components: [typeRow]
       });
 
       // Create collector for button interactions
@@ -569,7 +541,7 @@ export class IntelCommandHandler implements IntelCommand {
 
       if (!collector) {
         await interaction.editReply({
-          content: getThemeMessage(MessageCategory.ERROR, 'operation_error', 'Unable to create intel wizard. Please try again.').text,
+          content: getThemeMessage(MessageCategory.ERROR, 'operation_error', 'Unable to create intel interface. Please try again.').text,
           components: []
         });
         return;
@@ -602,7 +574,7 @@ export class IntelCommandHandler implements IntelCommand {
           try {
             await interaction.deleteReply();
             await interaction.followUp({
-              content: getThemeMessage(MessageCategory.WARNING, 'timeout_warning', 'Intel wizard timed out. Please run `/intel add` again to start over.').text,
+              content: getThemeMessage(MessageCategory.WARNING, 'timeout_warning', 'Intel selection timed out. Please run `/intel add` again to start over.').text,
               flags: MessageFlags.Ephemeral
             });
           } catch (error) {
@@ -616,7 +588,7 @@ export class IntelCommandHandler implements IntelCommand {
       
       if (!interaction.replied) {
         await interaction.reply({
-          content: getThemeMessage(MessageCategory.ERROR, 'operation_error', 'Error starting intel wizard. Please try again.').text,
+          content: getThemeMessage(MessageCategory.ERROR, 'operation_error', 'Error starting intel interface. Please try again.').text,
           flags: MessageFlags.Ephemeral
         });
       }
@@ -634,17 +606,12 @@ export class IntelCommandHandler implements IntelCommand {
     selectedType: string, 
     guildId: string
   ): Promise<void> {
-    // For now, focus on rift and ore implementation
     if (selectedType === 'rift') {
       await this.handleRiftCollection(buttonInteraction, guildId);
     } else if (selectedType === 'ore') {
       await this.handleOreCollection(buttonInteraction, guildId);
-    } else {
-      // Placeholder for other types
-      await buttonInteraction.reply({
-        content: getThemeMessage(MessageCategory.ACKNOWLEDGMENT, 'feature_unavailable', `📋 **${selectedType.charAt(0).toUpperCase() + selectedType.slice(1)} Intel** collection not yet implemented. Please use \`/intel ${selectedType}\` for now.`).text,
-        flags: MessageFlags.Ephemeral
-      });
+    } else if (selectedType === 'site') {
+      await this.handleSiteCollection(buttonInteraction, guildId);
     }
   }
 
@@ -749,8 +716,8 @@ export class IntelCommandHandler implements IntelCommand {
           // Notify intel channel
           await notifyIntelChannel(riftButtonInteraction as any, embed);
 
-          // Clean up wizard messages
-          await this.cleanupWizardMessages(riftButtonInteraction);
+          // Clean up messages
+          await this.cleanupMessages(riftButtonInteraction);
 
         } catch (error) {
           console.error('[Intel] Error in rift type collection:', error);
@@ -916,8 +883,8 @@ export class IntelCommandHandler implements IntelCommand {
           // Notify intel channel
           await notifyIntelChannel(oreTypeInteraction as any, embed);
 
-          // Clean up wizard messages
-          await this.cleanupWizardMessages(oreTypeInteraction);
+          // Clean up messages
+          await this.cleanupMessages(oreTypeInteraction);
 
           // Clean up user's system name message
           try {
@@ -959,6 +926,262 @@ export class IntelCommandHandler implements IntelCommand {
       try {
         await buttonInteraction.followUp({
           content: getThemeMessage(MessageCategory.ERROR, 'operation_error', 'Error setting up ore intel collection. Please try again.').text,
+          flags: MessageFlags.Ephemeral
+        });
+      } catch (followUpError) {
+        console.error('[Intel] Error sending error message:', followUpError);
+      }
+    }
+  }
+
+  /**
+   * Handle site-specific information collection
+   * @param buttonInteraction - Button interaction from type selection  
+   * @param guildId - Guild ID
+   */
+  private async handleSiteCollection(buttonInteraction: ButtonInteraction, guildId: string): Promise<void> {
+    try {
+      // Present site type selection buttons
+      const siteTypeRow1 = new ActionRowBuilder<ButtonBuilder>()
+        .addComponents(
+          new ButtonBuilder()
+            .setCustomId('site_type_enclave')
+            .setLabel('Enclave')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('🏛️'),
+          new ButtonBuilder()
+            .setCustomId('site_type_termit')
+            .setLabel('Termit')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('🐛'),
+          new ButtonBuilder()
+            .setCustomId('site_type_domination')
+            .setLabel('Domination')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('⚔️')
+        );
+
+      const siteTypeRow2 = new ActionRowBuilder<ButtonBuilder>()
+        .addComponents(
+          new ButtonBuilder()
+            .setCustomId('site_type_inculcator')
+            .setLabel('Inculcator')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('🔬'),
+          new ButtonBuilder()
+            .setCustomId('site_type_other')
+            .setLabel('Other')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('❓')
+        );
+
+      await buttonInteraction.reply({
+        content: getThemeMessage(MessageCategory.ACKNOWLEDGMENT, 'input_request', 'Please select the site type:').text,
+        components: [siteTypeRow1, siteTypeRow2]
+      });
+
+      // Create collector for site type selection
+      const siteTypeCollector = buttonInteraction.channel?.createMessageComponentCollector({
+        componentType: ComponentType.Button,
+        filter: (i) => i.user.id === buttonInteraction.user.id && i.customId.startsWith('site_type_'),
+        time: 60_000, // 1 minute timeout
+        max: 1
+      });
+
+      siteTypeCollector?.on('collect', async (siteTypeInteraction) => {
+        try {
+          const selectedSiteType = siteTypeInteraction.customId.replace('site_type_', '');
+          let siteName: string;
+
+          // Handle site name based on type
+          if (selectedSiteType === 'other') {
+            // Ask for custom site name
+            await siteTypeInteraction.reply({
+              content: getThemeMessage(MessageCategory.ACKNOWLEDGMENT, 'input_request', 'Please enter the custom site name:').text
+            });
+
+            // Wait for custom site name input
+            const siteNameMessage = await this.awaitUserMessage(siteTypeInteraction, 'site name');
+            if (!siteNameMessage) {
+              return; // Timeout or error handled in awaitUserMessage
+            }
+
+            siteName = siteNameMessage.content.trim();
+
+            // Clean up the custom name message
+            try {
+              await siteNameMessage.delete();
+            } catch (error) {
+              // Ignore deletion errors - not critical
+            }
+          } else {
+            // Use predefined site name
+            siteName = `${selectedSiteType.charAt(0).toUpperCase() + selectedSiteType.slice(1)} site`;
+            
+            await siteTypeInteraction.reply({
+              content: getThemeMessage(MessageCategory.ACKNOWLEDGMENT, 'input_request', 
+                `Site: **${siteName}**\n\nPlease select the triggered status:`).text
+            });
+          }
+
+          // Present triggered status selection buttons
+          const triggeredRow = new ActionRowBuilder<ButtonBuilder>()
+            .addComponents(
+              new ButtonBuilder()
+                .setCustomId('site_triggered_yes')
+                .setLabel('Yes')
+                .setStyle(ButtonStyle.Danger)
+                .setEmoji('🔴'),
+              new ButtonBuilder()
+                .setCustomId('site_triggered_no')
+                .setLabel('No')
+                .setStyle(ButtonStyle.Success)
+                .setEmoji('🟢'),
+              new ButtonBuilder()
+                .setCustomId('site_triggered_unknown')
+                .setLabel('Unknown')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('❓')
+            );
+
+          const triggeredMessage = await siteTypeInteraction.followUp({
+            content: selectedSiteType === 'other' ? 
+              getThemeMessage(MessageCategory.ACKNOWLEDGMENT, 'input_request', 
+                `Site: **${siteName}**\n\nPlease select the triggered status:`).text :
+              getThemeMessage(MessageCategory.ACKNOWLEDGMENT, 'input_request', 'Please select the triggered status:').text,
+            components: [triggeredRow]
+          });
+
+          // Create collector for triggered status selection
+          const triggeredCollector = buttonInteraction.channel?.createMessageComponentCollector({
+            componentType: ComponentType.Button,
+            filter: (i) => i.user.id === buttonInteraction.user.id && i.customId.startsWith('site_triggered_'),
+            time: 60_000, // 1 minute timeout
+            max: 1
+          });
+
+          triggeredCollector?.on('collect', async (triggeredInteraction) => {
+            try {
+              const selectedTriggered = triggeredInteraction.customId.replace('site_triggered_', '');
+              
+              // Ask for system name
+              await triggeredInteraction.reply({
+                content: getThemeMessage(MessageCategory.ACKNOWLEDGMENT, 'input_request', 'Please enter the system name:').text
+              });
+
+              // Wait for system name input
+              const systemMessage = await this.awaitUserMessage(triggeredInteraction, 'system name');
+              if (!systemMessage) {
+                return; // Timeout or error handled in awaitUserMessage
+              }
+
+              const systemName = systemMessage.content.trim();
+
+              // Get site handler and create intel item
+              const siteHandler = this.registry.getHandler('site');
+              if (!siteHandler) {
+                throw new Error('Site handler not found');
+              }
+
+              const siteContent = {
+                name: siteName,
+                system: systemName,
+                triggered: selectedTriggered
+              };
+
+              const intelItem = {
+                id: siteHandler.generateId(),
+                timestamp: new Date().toISOString(),
+                reporter: buttonInteraction.user.id,
+                content: siteContent
+              };
+
+              // Store the intel item
+              await storeIntelItem(guildId, intelItem);
+
+              // Create and send success embed
+              const entity = new IntelEntity(guildId, intelItem);
+              const embed = siteHandler.createEmbed(entity);
+
+              await triggeredInteraction.followUp({
+                content: getThemeMessage(MessageCategory.SUCCESS, 'storage_success', 
+                  `✅ Site intel stored successfully!\n**Site:** ${siteName}\n**Triggered:** ${selectedTriggered}\n**System:** ${systemName}`).text,
+                embeds: [embed]
+              });
+
+              // Notify intel channel
+              await notifyIntelChannel(triggeredInteraction as any, embed);
+
+              // Clean up messages
+              await this.cleanupMessages(triggeredInteraction);
+
+              // Clean up user's system name message
+              try {
+                await systemMessage.delete();
+              } catch (error) {
+                // Ignore deletion errors - not critical
+              }
+
+            } catch (error) {
+              console.error('[Intel] Error processing triggered status selection:', error);
+              
+              if (!triggeredInteraction.replied && !triggeredInteraction.deferred) {
+                await triggeredInteraction.reply({
+                  content: getThemeMessage(MessageCategory.ERROR, 'operation_error', 'Error processing triggered status selection. Please try again.').text,
+                  flags: MessageFlags.Ephemeral
+                });
+              }
+            }
+          });
+
+          // Handle triggered collector timeout
+          triggeredCollector?.on('end', async (_collected: any, reason: string) => {
+            if (reason === 'time') {
+              try {
+                await triggeredMessage.delete();
+                await siteTypeInteraction.followUp({
+                  content: getThemeMessage(MessageCategory.WARNING, 'timeout_warning', 'Triggered status selection timed out. Please run `/intel add` again to start over.').text,
+                  flags: MessageFlags.Ephemeral
+                });
+              } catch (error) {
+                // Ignore cleanup errors on timeout - not critical
+              }
+            }
+          });
+
+        } catch (error) {
+          console.error('[Intel] Error processing site type selection:', error);
+          
+          if (!siteTypeInteraction.replied && !siteTypeInteraction.deferred) {
+            await siteTypeInteraction.reply({
+              content: getThemeMessage(MessageCategory.ERROR, 'operation_error', 'Error processing site type selection. Please try again.').text,
+              flags: MessageFlags.Ephemeral
+            });
+          }
+        }
+      });
+
+      // Handle site type collector timeout
+      siteTypeCollector?.on('end', async (_collected: any, reason: string) => {
+        if (reason === 'time') {
+          try {
+            await buttonInteraction.deleteReply();
+            await buttonInteraction.followUp({
+              content: getThemeMessage(MessageCategory.WARNING, 'timeout_warning', 'Site type selection timed out. Please run `/intel add` again to start over.').text,
+              flags: MessageFlags.Ephemeral
+            });
+          } catch (error) {
+            // Ignore cleanup errors on timeout - not critical
+          }
+        }
+      });
+
+    } catch (error) {
+      console.error('[Intel] Error in site collection:', error);
+      
+      try {
+        await buttonInteraction.followUp({
+          content: getThemeMessage(MessageCategory.ERROR, 'operation_error', 'Error setting up site intel collection. Please try again.').text,
           flags: MessageFlags.Ephemeral
         });
       } catch (followUpError) {
@@ -1012,10 +1235,10 @@ export class IntelCommandHandler implements IntelCommand {
   }
 
   /**
-   * Clean up wizard messages by deleting the original interaction message
+   * Clean up messages by deleting the original interaction message
    * @param interaction - Button interaction to clean up
    */
-  private async cleanupWizardMessages(interaction: ButtonInteraction): Promise<void> {
+  private async cleanupMessages(interaction: ButtonInteraction): Promise<void> {
     try {
       // Get the original message (the one with the type selection buttons)
       const originalMessage = interaction.message;
