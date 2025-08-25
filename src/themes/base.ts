@@ -33,6 +33,18 @@ export function createGetRandomMessage(messages: Record<MessageCategory, ThemeMe
       };
     }
     
+    // Filter to only messages without context and without variables (generic messages safe for fallback)
+    const genericMessages = categoryMessages.filter(msg => 
+      !msg.context && (!msg.variables || msg.variables.length === 0)
+    );
+    
+    // Prefer generic messages for fallback scenarios
+    if (genericMessages.length > 0) {
+      const randomIndex = Math.floor(Math.random() * genericMessages.length);
+      return genericMessages[randomIndex];
+    }
+    
+    // Final fallback to any message if no generic messages exist
     const randomIndex = Math.floor(Math.random() * categoryMessages.length);
     return categoryMessages[randomIndex];
   };

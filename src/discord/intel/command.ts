@@ -634,9 +634,11 @@ export class IntelCommandHandler implements IntelCommand {
     selectedType: string, 
     guildId: string
   ): Promise<void> {
-    // For now, focus on rift implementation
+    // For now, focus on rift and ore implementation
     if (selectedType === 'rift') {
       await this.handleRiftCollection(buttonInteraction, guildId);
+    } else if (selectedType === 'ore') {
+      await this.handleOreCollection(buttonInteraction, guildId);
     } else {
       // Placeholder for other types
       await buttonInteraction.reply({
@@ -784,6 +786,179 @@ export class IntelCommandHandler implements IntelCommand {
       try {
         await buttonInteraction.followUp({
           content: getThemeMessage(MessageCategory.ERROR, 'operation_error', 'Error setting up rift intel collection. Please try again.').text,
+          flags: MessageFlags.Ephemeral
+        });
+      } catch (followUpError) {
+        console.error('[Intel] Error sending error message:', followUpError);
+      }
+    }
+  }
+
+  /**
+   * Handle ore-specific information collection
+   * @param buttonInteraction - Button interaction from type selection  
+   * @param guildId - Guild ID
+   */
+  private async handleOreCollection(buttonInteraction: ButtonInteraction, guildId: string): Promise<void> {
+    try {
+      // Present ore type selection buttons
+      const oreTypeRow = new ActionRowBuilder<ButtonBuilder>()
+        .addComponents(
+          new ButtonBuilder()
+            .setCustomId('ore_type_common')
+            .setLabel('Common')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('⛏️'),
+          new ButtonBuilder()
+            .setCustomId('ore_type_carbon')
+            .setLabel('Carbon')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('⚫'),
+          new ButtonBuilder()
+            .setCustomId('ore_type_metal')
+            .setLabel('Metal')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('🔩')
+        );
+
+      const deepcoreRow = new ActionRowBuilder<ButtonBuilder>()
+        .addComponents(
+          new ButtonBuilder()
+            .setCustomId('ore_type_deepcore_common')
+            .setLabel('Deepcore Common')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('💎'),
+          new ButtonBuilder()
+            .setCustomId('ore_type_deepcore_carbon')
+            .setLabel('Deepcore Carbon')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('⚫'),
+          new ButtonBuilder()
+            .setCustomId('ore_type_deepcore_metal')
+            .setLabel('Deepcore Metal')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('🔩')
+        );
+
+      const specialRow = new ActionRowBuilder<ButtonBuilder>()
+        .addComponents(
+          new ButtonBuilder()
+            .setCustomId('ore_type_murky')
+            .setLabel('Murky')
+            .setStyle(ButtonStyle.Danger)
+            .setEmoji('🌫️')
+        );
+
+      await buttonInteraction.reply({
+        content: getThemeMessage(MessageCategory.ACKNOWLEDGMENT, 'input_request', 'Please select the ore type:').text,
+        components: [oreTypeRow, deepcoreRow, specialRow]
+      });
+
+      // Create collector for ore type selection
+      const oreTypeCollector = buttonInteraction.channel?.createMessageComponentCollector({
+        componentType: ComponentType.Button,
+        filter: (i) => i.user.id === buttonInteraction.user.id && i.customId.startsWith('ore_type_'),
+        time: 60_000, // 1 minute timeout
+        max: 1
+      });
+
+      oreTypeCollector?.on('collect', async (oreTypeInteraction) => {
+        try {
+          const selectedOreType = oreTypeInteraction.customId.replace('ore_type_', '').replace('_', ' ');
+          
+          // Ask for system name
+          await oreTypeInteraction.reply({
+            content: getThemeMessage(MessageCategory.ACKNOWLEDGMENT, 'input_request', 'Please enter the system name:').text
+          });
+
+          // Wait for system name input
+          const systemMessage = await this.awaitUserMessage(oreTypeInteraction, 'system name');
+          if (!systemMessage) {
+            return; // Timeout or error handled in awaitUserMessage
+          }
+
+          const systemName = systemMessage.content.trim();
+
+          // Create the ore intel item
+          const oreHandler = this.registry.getHandler('ore');
+          if (!oreHandler) {
+            throw new Error('Ore handler not found');
+          }
+
+          const oreContent = {
+            oreType: selectedOreType,
+            name: `${selectedOreType} ore in ${systemName}`,
+            systemName: systemName,
+            near: 'TBD' // Will be enhanced later
+          };
+
+          const intelItem = {
+            id: oreHandler.generateId(),
+            timestamp: new Date().toISOString(),
+            reporter: oreTypeInteraction.user.id,
+            content: oreContent
+          };
+
+          // Store the intel
+          await storeIntelItem(guildId, intelItem);
+
+          // Create and send success embed
+          const entity = new IntelEntity(guildId, intelItem);
+          const embed = oreHandler.createEmbed(entity);
+
+          // Success message
+          await oreTypeInteraction.followUp({
+            content: getThemeMessage(MessageCategory.SUCCESS, 'storage_success', 
+              `✅ Ore intel stored successfully!\n**Type:** ${selectedOreType}\n**System:** ${systemName}`).text,
+            embeds: [embed]
+          });
+
+          // Notify intel channel
+          await notifyIntelChannel(oreTypeInteraction as any, embed);
+
+          // Clean up wizard messages
+          await this.cleanupWizardMessages(oreTypeInteraction);
+
+          // Clean up user's system name message
+          try {
+            await systemMessage.delete();
+          } catch (error) {
+            // Ignore deletion errors - not critical
+          }
+
+        } catch (error) {
+          console.error('[Intel] Error processing ore type selection:', error);
+          
+          if (!oreTypeInteraction.replied && !oreTypeInteraction.deferred) {
+            await oreTypeInteraction.reply({
+              content: getThemeMessage(MessageCategory.ERROR, 'operation_error', 'Error processing ore type selection. Please try again.').text,
+              flags: MessageFlags.Ephemeral
+            });
+          }
+        }
+      });
+
+      // Handle ore type collector timeout
+      oreTypeCollector?.on('end', async (_collected: any, reason: string) => {
+        if (reason === 'time') {
+          try {
+            await buttonInteraction.deleteReply();
+            await buttonInteraction.followUp({
+              content: getThemeMessage(MessageCategory.WARNING, 'timeout_warning', 'Ore selection timed out. Please run `/intel add` again to start over.').text,
+              flags: MessageFlags.Ephemeral
+            });
+          } catch (error) {
+            // Ignore cleanup errors on timeout - not critical
+          }
+        }
+      });
+
+    } catch (error) {
+      console.error('[Intel] Error in ore collection:', error);
+      
+      try {
+        await buttonInteraction.followUp({
+          content: getThemeMessage(MessageCategory.ERROR, 'operation_error', 'Error setting up ore intel collection. Please try again.').text,
           flags: MessageFlags.Ephemeral
         });
       } catch (followUpError) {
