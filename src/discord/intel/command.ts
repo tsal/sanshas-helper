@@ -643,7 +643,7 @@ export class IntelCommandHandler implements IntelCommand {
 
       // Update message with rift type selection
       await buttonInteraction.update({
-        content: getThemeMessage(MessageCategory.ACKNOWLEDGMENT, 'input_request', '🌌 **Rift Intel Collection**\n\nSelect the rift type:').text,
+        content: getThemeMessage(MessageCategory.ACKNOWLEDGMENT, 'input_request', '**Rift Intel Collection**\n\nSelect the rift type:').text,
         components: [riftTypeRow]
       });
 
@@ -672,7 +672,7 @@ export class IntelCommandHandler implements IntelCommand {
 
           // Update the message to show selected type and ask for system
           await riftButtonInteraction.update({
-            content: getThemeMessage(MessageCategory.ACKNOWLEDGMENT, 'input_request', `🌌 **Rift Intel Collection**\n\n✅ Rift type: **${riftType}**\n\nPlease provide the **system name** where this rift is located:`).text,
+            content: getThemeMessage(MessageCategory.ACKNOWLEDGMENT, 'input_request', `**Rift Intel Collection**\n\nRift type: **${riftType}**\n\nPlease provide the **system name** where this rift is located:`).text,
             components: []
           });
 
@@ -710,7 +710,7 @@ export class IntelCommandHandler implements IntelCommand {
 
           // Update message with success
           await buttonInteraction.editReply({
-            content: getThemeMessage(MessageCategory.SUCCESS, undefined, '✅ **Rift intel successfully recorded!**').text,
+            content: getThemeMessage(MessageCategory.SUCCESS, undefined, '**Rift intel successfully recorded!**').text,
             embeds: [embed],
             components: []
           });
@@ -881,7 +881,7 @@ export class IntelCommandHandler implements IntelCommand {
           // Update message with success
           await buttonInteraction.editReply({
             content: getThemeMessage(MessageCategory.SUCCESS, undefined, 
-              `✅ Ore intel stored successfully!\n**Type:** ${selectedOreType}\n**System:** ${systemName}`).text,
+              `Ore intel stored successfully!\n**Type:** ${selectedOreType}\n**System:** ${systemName}`).text,
             embeds: [embed],
             components: []
           });
@@ -1117,7 +1117,7 @@ export class IntelCommandHandler implements IntelCommand {
 
               await buttonInteraction.editReply({
                 content: getThemeMessage(MessageCategory.SUCCESS, undefined, 
-                  `✅ Site intel stored successfully!\n**Site:** ${siteName}\n**Triggered:** ${selectedTriggered}\n**System:** ${systemName}`).text,
+                  `Site intel stored successfully!\n**Site:** ${siteName}\n**Triggered:** ${selectedTriggered}\n**System:** ${systemName}`).text,
                 embeds: [embed],
                 components: []
               });
@@ -1318,7 +1318,7 @@ export class IntelCommandHandler implements IntelCommand {
    */
   private createRiftIntelEmbed(item: IntelEntity): EmbedBuilder {
     const embed = new EmbedBuilder()
-      .setTitle(`🌌 Rift Intel: ${item.intelItem.id}`)
+      .setTitle(`Rift Intel: ${item.intelItem.id}`)
       .setTimestamp(new Date(item.intelItem.timestamp))
       .setColor(0x8b5cf6);
     
@@ -1346,7 +1346,7 @@ export class IntelCommandHandler implements IntelCommand {
    */
   private createOreIntelEmbed(item: IntelEntity): EmbedBuilder {
     const embed = new EmbedBuilder()
-      .setTitle(`⛏️ Ore Site Intel: ${item.intelItem.id}`)
+      .setTitle(`Ore Site Intel: ${item.intelItem.id}`)
       .setTimestamp(new Date(item.intelItem.timestamp))
       .setColor(0xf59e0b);
     
@@ -1375,7 +1375,7 @@ export class IntelCommandHandler implements IntelCommand {
    */
   private createFleetIntelEmbed(item: IntelEntity): EmbedBuilder {
     const embed = new EmbedBuilder()
-      .setTitle(`⚔️ Fleet Intel: ${item.intelItem.id}`)
+      .setTitle(`Fleet Intel: ${item.intelItem.id}`)
       .setTimestamp(new Date(item.intelItem.timestamp))
       .setColor(0xef4444);
     
