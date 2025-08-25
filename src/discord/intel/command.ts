@@ -225,7 +225,7 @@ export class IntelCommandHandler implements IntelCommand {
       const successMessage = handler.getSuccessMessage(content);
       
       await interaction.reply({ 
-        content: getThemeMessage(MessageCategory.SUCCESS, 'storage_success', successMessage).text,
+        content: getThemeMessage(MessageCategory.SUCCESS, undefined, successMessage).text,
         embeds: [embed],
         flags: MessageFlags.Ephemeral
       });
@@ -641,8 +641,8 @@ export class IntelCommandHandler implements IntelCommand {
       const riftTypeRow = new ActionRowBuilder<ButtonBuilder>()
         .addComponents(riftTypeButtons);
 
-      // Send rift type selection
-      await buttonInteraction.reply({
+      // Update message with rift type selection
+      await buttonInteraction.update({
         content: getThemeMessage(MessageCategory.ACKNOWLEDGMENT, 'input_request', '🌌 **Rift Intel Collection**\n\nSelect the rift type:').text,
         components: [riftTypeRow]
       });
@@ -708,27 +708,35 @@ export class IntelCommandHandler implements IntelCommand {
           const entity = new IntelEntity(guildId, intelItem);
           const embed = riftHandler.createEmbed(entity);
 
-          await riftButtonInteraction.followUp({
-            content: getThemeMessage(MessageCategory.SUCCESS, 'storage_success', '✅ **Rift intel successfully recorded!**').text,
-            embeds: [embed]
+          // Update message with success
+          await buttonInteraction.editReply({
+            content: getThemeMessage(MessageCategory.SUCCESS, undefined, '✅ **Rift intel successfully recorded!**').text,
+            embeds: [embed],
+            components: []
           });
 
           // Notify intel channel
           await notifyIntelChannel(riftButtonInteraction as any, embed);
 
-          // Clean up messages
-          await this.cleanupMessages(riftButtonInteraction);
+          // Clean up messages after brief delay
+          setTimeout(async () => {
+            try {
+              await buttonInteraction.deleteReply();
+            } catch (error) {
+              // Ignore cleanup errors - not critical
+            }
+          }, 3000); // 3 second delay
 
         } catch (error) {
           console.error('[Intel] Error in rift type collection:', error);
           
           try {
-            await riftButtonInteraction.followUp({
+            await buttonInteraction.editReply({
               content: getThemeMessage(MessageCategory.ERROR, 'operation_error', 'Error recording rift intel. Please try again.').text,
-              flags: MessageFlags.Ephemeral
+              components: []
             });
-          } catch (followUpError) {
-            console.error('[Intel] Error sending error message:', followUpError);
+          } catch (editError) {
+            console.error('[Intel] Error sending error message:', editError);
           }
         }
       });
@@ -737,10 +745,6 @@ export class IntelCommandHandler implements IntelCommand {
         if (reason === 'time') {
           try {
             await buttonInteraction.deleteReply();
-            await buttonInteraction.followUp({
-              content: getThemeMessage(MessageCategory.WARNING, 'timeout_warning', 'Rift type selection timed out. Please run `/intel add` again to start over.').text,
-              flags: MessageFlags.Ephemeral
-            });
           } catch (error) {
             // Ignore cleanup errors on timeout - not critical
           }
@@ -816,7 +820,7 @@ export class IntelCommandHandler implements IntelCommand {
             .setEmoji('🌫️')
         );
 
-      await buttonInteraction.reply({
+      await buttonInteraction.update({
         content: getThemeMessage(MessageCategory.ACKNOWLEDGMENT, 'input_request', 'Please select the ore type:').text,
         components: [oreTypeRow, deepcoreRow, specialRow]
       });
@@ -833,9 +837,10 @@ export class IntelCommandHandler implements IntelCommand {
         try {
           const selectedOreType = oreTypeInteraction.customId.replace('ore_type_', '').replace('_', ' ');
           
-          // Ask for system name
-          await oreTypeInteraction.reply({
-            content: getThemeMessage(MessageCategory.ACKNOWLEDGMENT, 'input_request', 'Please enter the system name:').text
+          // Update message to ask for system name
+          await oreTypeInteraction.update({
+            content: getThemeMessage(MessageCategory.ACKNOWLEDGMENT, 'input_request', 'Please enter the system name:').text,
+            components: []
           });
 
           // Wait for system name input
@@ -873,18 +878,25 @@ export class IntelCommandHandler implements IntelCommand {
           const entity = new IntelEntity(guildId, intelItem);
           const embed = oreHandler.createEmbed(entity);
 
-          // Success message
-          await oreTypeInteraction.followUp({
-            content: getThemeMessage(MessageCategory.SUCCESS, 'storage_success', 
+          // Update message with success
+          await buttonInteraction.editReply({
+            content: getThemeMessage(MessageCategory.SUCCESS, undefined, 
               `✅ Ore intel stored successfully!\n**Type:** ${selectedOreType}\n**System:** ${systemName}`).text,
-            embeds: [embed]
+            embeds: [embed],
+            components: []
           });
 
           // Notify intel channel
           await notifyIntelChannel(oreTypeInteraction as any, embed);
 
-          // Clean up messages
-          await this.cleanupMessages(oreTypeInteraction);
+          // Clean up messages after brief delay
+          setTimeout(async () => {
+            try {
+              await buttonInteraction.deleteReply();
+            } catch (error) {
+              // Ignore cleanup errors - not critical
+            }
+          }, 3000); // 3 second delay
 
           // Clean up user's system name message
           try {
@@ -896,11 +908,13 @@ export class IntelCommandHandler implements IntelCommand {
         } catch (error) {
           console.error('[Intel] Error processing ore type selection:', error);
           
-          if (!oreTypeInteraction.replied && !oreTypeInteraction.deferred) {
-            await oreTypeInteraction.reply({
+          try {
+            await buttonInteraction.editReply({
               content: getThemeMessage(MessageCategory.ERROR, 'operation_error', 'Error processing ore type selection. Please try again.').text,
-              flags: MessageFlags.Ephemeral
+              components: []
             });
+          } catch (editError) {
+            console.error('[Intel] Error sending error message:', editError);
           }
         }
       });
@@ -910,10 +924,6 @@ export class IntelCommandHandler implements IntelCommand {
         if (reason === 'time') {
           try {
             await buttonInteraction.deleteReply();
-            await buttonInteraction.followUp({
-              content: getThemeMessage(MessageCategory.WARNING, 'timeout_warning', 'Ore selection timed out. Please run `/intel add` again to start over.').text,
-              flags: MessageFlags.Ephemeral
-            });
           } catch (error) {
             // Ignore cleanup errors on timeout - not critical
           }
@@ -1104,7 +1114,7 @@ export class IntelCommandHandler implements IntelCommand {
               const embed = siteHandler.createEmbed(entity);
 
               await triggeredInteraction.followUp({
-                content: getThemeMessage(MessageCategory.SUCCESS, 'storage_success', 
+                content: getThemeMessage(MessageCategory.SUCCESS, undefined, 
                   `✅ Site intel stored successfully!\n**Site:** ${siteName}\n**Triggered:** ${selectedTriggered}\n**System:** ${systemName}`).text,
                 embeds: [embed]
               });
