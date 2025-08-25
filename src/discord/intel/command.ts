@@ -5,7 +5,12 @@ import {
   EmbedBuilder,
   SlashCommandSubcommandsOnlyBuilder,
   Message,
-  InteractionResponse
+  InteractionResponse,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ButtonInteraction,
+  ComponentType
 } from 'discord.js';
 import { getThemeMessage, getThemeMessageWithVariablesByContext, MessageCategory } from '../../themes';
 import { IntelEntity, RiftIntelItem, isRiftIntelItem, OreIntelItem, isOreIntelItem, FleetIntelItem, isFleetIntelItem, SiteIntelItem, isSiteIntelItem, IntelItem, storeIntelItem, deleteIntelByIdFromInteraction, notifyIntelChannel } from './types';
@@ -85,6 +90,13 @@ export class IntelCommandHandler implements IntelCommand {
         });
       }
     }
+
+    // Add wizard-based add subcommand
+    command.addSubcommand(subcommand =>
+      subcommand
+        .setName('add')
+        .setDescription('Add an intelligence report using guided wizard')
+    );
 
     // Add list subcommand (reusing original implementation)
     command.addSubcommand(subcommand =>
@@ -171,6 +183,11 @@ export class IntelCommandHandler implements IntelCommand {
     // Handle del subcommand (reusing original implementation)
     if (subcommand === 'del') {
       return this.handleDelSubcommand(interaction, interaction.guildId);
+    }
+    
+    // Handle add subcommand (wizard-based intel creation)
+    if (subcommand === 'add') {
+      return this.handleAddSubcommand(interaction, interaction.guildId);
     }
     
     // Get the handler for this subcommand type
@@ -480,6 +497,359 @@ export class IntelCommandHandler implements IntelCommand {
 
     // If we reach here, the type is unknown/untracked
     await this.sendErrorResponse(interaction, `Unknown or untracked intel type: ${type}`);
+  }
+
+  /**
+   * Get emoji for intel type
+   * @param type - Intel type name
+   * @returns Emoji string for the intel type
+   */
+  private getIntelTypeEmoji(type: string): string {
+    switch (type.toLowerCase()) {
+      case 'rift':
+        return '🌌';
+      case 'ore':
+        return '⛏️';
+      case 'fleet':
+        return '⚔️';
+      case 'site':
+      default:
+        return '🏗️';
+    }
+  }
+
+  /**
+   * Handle add subcommand - presents intel type selection wizard
+   * @param interaction - Discord interaction object
+   * @param guildId - Guild ID
+   */
+  private async handleAddSubcommand(interaction: ChatInputCommandInteraction, guildId: string): Promise<void> {
+    try {
+      // Create buttons for each registered intel type
+      const buttons: ButtonBuilder[] = [];
+      const registeredTypes = this.registry.getRegisteredTypes();
+      
+      for (const type of registeredTypes) {
+        const handler = this.registry.getHandler(type);
+        if (handler) {
+          // Create emoji mapping for intel types
+          const emoji = this.getIntelTypeEmoji(type);
+          const button = new ButtonBuilder()
+            .setCustomId(`intel_add_${type}`)
+            .setLabel(`${emoji} ${type.charAt(0).toUpperCase() + type.slice(1)}`)
+            .setStyle(ButtonStyle.Secondary);
+          
+          buttons.push(button);
+        }
+      }
+
+      // Create action row(s) for buttons (max 5 per row)
+      const rows: ActionRowBuilder<ButtonBuilder>[] = [];
+      for (let i = 0; i < buttons.length; i += 5) {
+        const row = new ActionRowBuilder<ButtonBuilder>()
+          .addComponents(buttons.slice(i, i + 5));
+        rows.push(row);
+      }
+
+      // Send non-ephemeral reply with type selection buttons
+      await interaction.reply({
+        content: getThemeMessage(MessageCategory.GREETING, 'wizard_start', '🕵️ **Intel Wizard** - Select the type of intelligence to report:').text,
+        components: rows
+      });
+
+      // Create collector for button interactions
+      const collector = interaction.channel?.createMessageComponentCollector({
+        componentType: ComponentType.Button,
+        filter: (buttonInteraction) => {
+          return buttonInteraction.user.id === interaction.user.id && 
+                 buttonInteraction.customId.startsWith('intel_add_');
+        },
+        time: 300_000 // 5 minutes timeout
+      });
+
+      if (!collector) {
+        await interaction.editReply({
+          content: getThemeMessage(MessageCategory.ERROR, 'operation_error', 'Unable to create intel wizard. Please try again.').text,
+          components: []
+        });
+        return;
+      }
+
+      // Handle button interactions
+      collector.on('collect', async (buttonInteraction: ButtonInteraction) => {
+        try {
+          // Extract intel type from button ID
+          const selectedType = buttonInteraction.customId.replace('intel_add_', '');
+          
+          // Route to type-specific handler
+          await this.handleTypeSpecificCollection(buttonInteraction, selectedType, guildId);
+          
+        } catch (error) {
+          console.error('[Intel] Error handling type selection:', error);
+          
+          if (!buttonInteraction.replied && !buttonInteraction.deferred) {
+            await buttonInteraction.reply({
+              content: getThemeMessage(MessageCategory.ERROR, 'operation_error', 'Error processing your selection. Please try again.').text,
+              flags: MessageFlags.Ephemeral
+            });
+          }
+        }
+      });
+
+      // Handle collector timeout
+      collector.on('end', async (_collected: any, reason: string) => {
+        if (reason === 'time') {
+          try {
+            await interaction.deleteReply();
+            await interaction.followUp({
+              content: getThemeMessage(MessageCategory.WARNING, 'timeout_warning', 'Intel wizard timed out. Please run `/intel add` again to start over.').text,
+              flags: MessageFlags.Ephemeral
+            });
+          } catch (error) {
+            // Ignore cleanup errors on timeout - not critical
+          }
+        }
+      });
+
+    } catch (error) {
+      console.error('[Intel] Error in add subcommand:', error);
+      
+      if (!interaction.replied) {
+        await interaction.reply({
+          content: getThemeMessage(MessageCategory.ERROR, 'operation_error', 'Error starting intel wizard. Please try again.').text,
+          flags: MessageFlags.Ephemeral
+        });
+      }
+    }
+  }
+
+  /**
+   * Handle type-specific information collection
+   * @param buttonInteraction - Button interaction from type selection
+   * @param selectedType - The selected intel type
+   * @param guildId - Guild ID
+   */
+  private async handleTypeSpecificCollection(
+    buttonInteraction: ButtonInteraction, 
+    selectedType: string, 
+    guildId: string
+  ): Promise<void> {
+    // For now, focus on rift implementation
+    if (selectedType === 'rift') {
+      await this.handleRiftCollection(buttonInteraction, guildId);
+    } else {
+      // Placeholder for other types
+      await buttonInteraction.reply({
+        content: getThemeMessage(MessageCategory.ACKNOWLEDGMENT, 'feature_unavailable', `📋 **${selectedType.charAt(0).toUpperCase() + selectedType.slice(1)} Intel** collection not yet implemented. Please use \`/intel ${selectedType}\` for now.`).text,
+        flags: MessageFlags.Ephemeral
+      });
+    }
+  }
+
+  /**
+   * Handle rift-specific information collection
+   * @param buttonInteraction - Button interaction from type selection
+   * @param guildId - Guild ID
+   */
+  private async handleRiftCollection(buttonInteraction: ButtonInteraction, guildId: string): Promise<void> {
+    try {
+      // Create buttons for the 3 known rift types
+      const riftTypeButtons: ButtonBuilder[] = [
+        new ButtonBuilder()
+          .setCustomId('rift_type_0633')
+          .setLabel('0633')
+          .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+          .setCustomId('rift_type_f8da')
+          .setLabel('f8da')
+          .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+          .setCustomId('rift_type_0020')
+          .setLabel('0020')
+          .setStyle(ButtonStyle.Secondary)
+      ];
+
+      const riftTypeRow = new ActionRowBuilder<ButtonBuilder>()
+        .addComponents(riftTypeButtons);
+
+      // Send rift type selection
+      await buttonInteraction.reply({
+        content: getThemeMessage(MessageCategory.ACKNOWLEDGMENT, 'input_request', '🌌 **Rift Intel Collection**\n\nSelect the rift type:').text,
+        components: [riftTypeRow]
+      });
+
+      // Create collector for rift type selection
+      const riftTypeCollector = buttonInteraction.channel?.createMessageComponentCollector({
+        componentType: ComponentType.Button,
+        filter: (riftButtonInteraction) => {
+          return riftButtonInteraction.user.id === buttonInteraction.user.id && 
+                 riftButtonInteraction.customId.startsWith('rift_type_');
+        },
+        time: 60_000 // 1 minute timeout
+      });
+
+      if (!riftTypeCollector) {
+        await buttonInteraction.editReply({
+          content: getThemeMessage(MessageCategory.ERROR, 'collection_error', 'Unable to collect rift type. Please try again.').text,
+          components: []
+        });
+        return;
+      }
+
+      riftTypeCollector.on('collect', async (riftButtonInteraction: ButtonInteraction) => {
+        try {
+          // Extract rift type from button ID
+          const riftType = riftButtonInteraction.customId.replace('rift_type_', '');
+
+          // Update the message to show selected type and ask for system
+          await riftButtonInteraction.update({
+            content: getThemeMessage(MessageCategory.ACKNOWLEDGMENT, 'input_request', `🌌 **Rift Intel Collection**\n\n✅ Rift type: **${riftType}**\n\nPlease provide the **system name** where this rift is located:`).text,
+            components: []
+          });
+
+          // Wait for system name message  
+          const systemMessage = await this.awaitUserMessage(riftButtonInteraction, 'system name');
+          if (!systemMessage) return;
+
+          const systemName = systemMessage.content.trim();
+
+          // Create the rift intel item
+          const riftHandler = this.registry.getHandler('rift');
+          if (!riftHandler) {
+            throw new Error('Rift handler not found');
+          }
+
+          const riftContent = {
+            type: riftType,
+            systemName: systemName,
+            near: '' // Skip optional field for now
+          };
+
+          const intelItem = {
+            id: riftHandler.generateId(),
+            timestamp: new Date().toISOString(),
+            reporter: buttonInteraction.user.id,
+            content: riftContent
+          };
+
+          // Store the intel item
+          await storeIntelItem(guildId, intelItem);
+
+          // Create and send success embed
+          const entity = new IntelEntity(guildId, intelItem);
+          const embed = riftHandler.createEmbed(entity);
+
+          await riftButtonInteraction.followUp({
+            content: getThemeMessage(MessageCategory.SUCCESS, 'storage_success', '✅ **Rift intel successfully recorded!**').text,
+            embeds: [embed]
+          });
+
+          // Notify intel channel
+          await notifyIntelChannel(riftButtonInteraction as any, embed);
+
+          // Clean up wizard messages
+          await this.cleanupWizardMessages(riftButtonInteraction);
+
+        } catch (error) {
+          console.error('[Intel] Error in rift type collection:', error);
+          
+          try {
+            await riftButtonInteraction.followUp({
+              content: getThemeMessage(MessageCategory.ERROR, 'operation_error', 'Error recording rift intel. Please try again.').text,
+              flags: MessageFlags.Ephemeral
+            });
+          } catch (followUpError) {
+            console.error('[Intel] Error sending error message:', followUpError);
+          }
+        }
+      });
+
+      riftTypeCollector.on('end', async (_collected: any, reason: string) => {
+        if (reason === 'time') {
+          try {
+            await buttonInteraction.deleteReply();
+            await buttonInteraction.followUp({
+              content: getThemeMessage(MessageCategory.WARNING, 'timeout_warning', 'Rift type selection timed out. Please run `/intel add` again to start over.').text,
+              flags: MessageFlags.Ephemeral
+            });
+          } catch (error) {
+            // Ignore cleanup errors on timeout - not critical
+          }
+        }
+      });
+
+    } catch (error) {
+      console.error('[Intel] Error in rift collection:', error);
+      
+      try {
+        await buttonInteraction.followUp({
+          content: getThemeMessage(MessageCategory.ERROR, 'operation_error', 'Error setting up rift intel collection. Please try again.').text,
+          flags: MessageFlags.Ephemeral
+        });
+      } catch (followUpError) {
+        console.error('[Intel] Error sending error message:', followUpError);
+      }
+    }
+  }
+
+  /**
+   * Wait for a user message in the same channel
+   * @param interaction - Original interaction for context
+   * @param fieldName - Name of the field being collected (for error messages)
+   * @returns Promise resolving to the user's message or null if timeout/error
+   */
+  private async awaitUserMessage(interaction: ButtonInteraction, fieldName: string): Promise<Message | null> {
+    if (!interaction.channel) {
+      return null;
+    }
+
+    // Check if the channel supports awaitMessages
+    if (!('awaitMessages' in interaction.channel)) {
+      await interaction.followUp({
+        content: getThemeMessage(MessageCategory.ERROR, 'operation_error', 'Unable to collect messages in this channel type.').text,
+        flags: MessageFlags.Ephemeral
+      });
+      return null;
+    }
+
+    try {
+      const collected = await interaction.channel.awaitMessages({
+        filter: (msg: Message) => msg.author.id === interaction.user.id,
+        max: 1,
+        time: 60_000, // 1 minute timeout
+        errors: ['time']
+      });
+
+      const message = collected.first();
+      return message || null;
+    } catch (error) {
+      try {
+        await interaction.followUp({
+          content: getThemeMessage(MessageCategory.WARNING, 'timeout_warning', `Timeout waiting for ${fieldName}. Please run \`/intel add\` again to start over.`).text,
+          flags: MessageFlags.Ephemeral
+        });
+      } catch (followUpError) {
+        // Ignore timeout message errors - not critical
+      }
+      
+      return null;
+    }
+  }
+
+  /**
+   * Clean up wizard messages by deleting the original interaction message
+   * @param interaction - Button interaction to clean up
+   */
+  private async cleanupWizardMessages(interaction: ButtonInteraction): Promise<void> {
+    try {
+      // Get the original message (the one with the type selection buttons)
+      const originalMessage = interaction.message;
+      if (originalMessage && 'delete' in originalMessage) {
+        await originalMessage.delete();
+      }
+    } catch (error) {
+      // Not critical, so we continue silently
+    }
   }
 
   /**
