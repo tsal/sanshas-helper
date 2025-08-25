@@ -35,6 +35,11 @@ const DATABASE_PATH_ENV_KEY = 'DATABASE_PATH';
 const DEFAULT_INTEL_EXPIRATION_ENV_KEY = 'DEFAULT_INTEL_EXPIRATION';
 
 /**
+ * Environment variable key for configuring intel channel name
+ */
+const INTEL_CHANNEL_NAME_ENV_KEY = 'INTEL_CHANNEL_NAME';
+
+/**
  * Interface for bot configuration
  */
 export interface BotConfig {
@@ -58,6 +63,10 @@ export interface BotConfig {
    * Default expiration time for intel items in hours
    */
   defaultIntelExpiration: number;
+  /**
+   * The name (or partial name) to search for when finding the intel channel
+   */
+  intelChannelName: string;
 }
 
 /**
@@ -128,26 +137,49 @@ const parseDatabasePath = (): string | null => {
 
 /**
  * Parses the DEFAULT_INTEL_EXPIRATION environment variable
- * @returns Default intel expiration time in hours, defaulting to 24
+ * @returns Default intel expiration time in hours, defaulting to 168
  */
 const parseDefaultIntelExpiration = (): number => {
   const envValue = process.env[DEFAULT_INTEL_EXPIRATION_ENV_KEY];
   
-  // If not set, default to 24 hours
+  // If not set, default to 168 hours
   if (envValue === undefined) {
-    return 24;
+    return 168;
   }
   
   // Parse as integer
   const parsedValue = parseInt(envValue.trim(), 10);
   
-  // If not a valid number or negative, fall back to 24
+  // If not a valid number or negative, fall back to 168
   if (isNaN(parsedValue) || parsedValue < 0) {
-    console.warn(`⚠️ Invalid DEFAULT_INTEL_EXPIRATION value: "${envValue}". Must be a non-negative number. Falling back to 24 hours.`);
-    return 24;
+    console.warn(`⚠️ Invalid DEFAULT_INTEL_EXPIRATION value: "${envValue}". Must be a non-negative number. Falling back to 168 hours.`);
+    return 168;
   }
   
   return parsedValue;
+};
+
+/**
+ * Parses the INTEL_CHANNEL_NAME environment variable
+ * @returns A valid channel name string, defaulting to 'tribe-intel'
+ */
+const parseIntelChannelName = (): string => {
+  const envValue = process.env[INTEL_CHANNEL_NAME_ENV_KEY];
+  
+  // If not set, default to 'tribe-intel'
+  if (envValue === undefined) {
+    return 'tribe-intel';
+  }
+  
+  // Basic validation - must be non-empty string
+  const trimmedValue = envValue.trim();
+  if (trimmedValue === '') {
+    // Only warn if explicitly set to empty (not normal usage)
+    console.warn('⚠️ INTEL_CHANNEL_NAME is empty, falling back to "tribe-intel"');
+    return 'tribe-intel';
+  }
+  
+  return trimmedValue;
 };
 
 /**
@@ -202,16 +234,18 @@ export const getBotConfig = (): BotConfig => {
   const rolesCommandName = parseRolesCommandName();
   const databasePath = parseDatabasePath();
   const defaultIntelExpiration = parseDefaultIntelExpiration();
+  const intelChannelName = parseIntelChannelName();
   
   // Log configuration summary at startup
   const databaseStatus = databasePath ? `enabled (${databasePath})` : 'disabled';
-  console.log(`Bot Configuration: Theme=${responseTheme}, Command=${rolesCommandName}, Database=${databaseStatus}, Intel Expiration=${defaultIntelExpiration}h, Roles=[${availableRoles.join(', ')}]`);
+  console.log(`Bot Configuration: Theme=${responseTheme}, Command=${rolesCommandName}, Database=${databaseStatus}, Intel Expiration=${defaultIntelExpiration}h, Intel Channel=${intelChannelName}, Roles=[${availableRoles.join(', ')}]`);
   
   return {
     availableRoles,
     responseTheme,
     rolesCommandName,
     databasePath,
-    defaultIntelExpiration
+    defaultIntelExpiration,
+    intelChannelName
   };
 };

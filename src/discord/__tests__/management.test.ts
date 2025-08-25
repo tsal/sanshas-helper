@@ -1,5 +1,5 @@
 import { Role, Collection } from 'discord.js';
-import { findRoleByName, createRole, checkManagementRole } from '../management';
+import { findRoleByName, createRole, checkManagementRole, findChannelByName } from '../management';
 import { RoleConfig } from '../types';
 
 describe('Discord Management', () => {
@@ -159,6 +159,41 @@ describe('Discord Management', () => {
 
       // Execute & Assert
       await expect(checkManagementRole(mockGuild)).rejects.toThrow('Management role check failed: Unknown error');
+    });
+  });
+
+  describe('findChannelByName', () => {
+    let mockChannel: any;
+    let mockChannelManager: any;
+    let mockChannelCollection: Collection<string, any>;
+
+    beforeEach(() => {
+      mockChannel = {
+        id: '555666777',
+        name: '-abc123-tribe-intel',
+      };
+
+      mockChannelCollection = new Collection();
+      
+      mockChannelManager = {
+        fetch: jest.fn(),
+        cache: mockChannelCollection,
+      };
+
+      mockGuild.channels = mockChannelManager;
+    });
+
+    it('should find channel with trailing match', async () => {
+      // Setup
+      mockChannelCollection.set('555', mockChannel);
+      mockChannelManager.fetch.mockResolvedValue(mockChannelCollection);
+
+      // Execute
+      const result = await findChannelByName(mockGuild, 'tribe-intel');
+
+      // Assert
+      expect(mockChannelManager.fetch).toHaveBeenCalledTimes(1);
+      expect(result).toBe(mockChannel);
     });
   });
 });

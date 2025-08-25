@@ -8,10 +8,12 @@ import {
   InteractionResponse
 } from 'discord.js';
 import { getThemeMessage, getThemeMessageWithVariablesByContext, MessageCategory } from '../../themes';
-import { IntelEntity, RiftIntelItem, isRiftIntelItem, OreIntelItem, isOreIntelItem, FleetIntelItem, isFleetIntelItem, SiteIntelItem, isSiteIntelItem, IntelItem, storeIntelItem, deleteIntelByIdFromInteraction } from './types';
+import { IntelEntity, RiftIntelItem, isRiftIntelItem, OreIntelItem, isOreIntelItem, FleetIntelItem, isFleetIntelItem, SiteIntelItem, isSiteIntelItem, IntelItem, storeIntelItem, deleteIntelByIdFromInteraction, notifyIntelChannel } from './types';
 import { repository } from '../../database/repository';
 import { IntelTypeRegistry } from './handlers/registry';
 import { IntelTypeHandler } from './handlers/types';
+import { getTypeFromIntelId, isValidIntelId } from './handlers/id-utils';
+import { getBotConfig } from '../../config';
 
 /**
  * Variables for basic intel list summary (normal pagination)
@@ -114,12 +116,6 @@ export class IntelCommandHandler implements IntelCommand {
         .setDescription('Delete an intel report')
         .addStringOption(option =>
           option
-            .setName('type')
-            .setDescription('Intel type (e.g., rift)')
-            .setRequired(true)
-        )
-        .addStringOption(option =>
-          option
             .setName('id')
             .setDescription('Intel item ID to delete')
             .setRequired(true)
@@ -217,6 +213,9 @@ export class IntelCommandHandler implements IntelCommand {
         flags: MessageFlags.Ephemeral
       });
 
+      // Notify the intel channel after successful user reply
+      await notifyIntelChannel(interaction, embed);
+
       // Set timer to delete the ephemeral message after 30 seconds (skip in test environment)
       if (process.env.NODE_ENV !== 'test') {
         setTimeout(async () => {
@@ -279,7 +278,8 @@ export class IntelCommandHandler implements IntelCommand {
    * @returns Number of items purged
    */
   private async purgeStaleIntel(guildId: string): Promise<number> {
-    const purgedCount = await repository.purgeStaleItems(IntelEntity, guildId, 24);
+    const config = getBotConfig();
+    const purgedCount = await repository.purgeStaleItems(IntelEntity, guildId, config.defaultIntelExpiration);
     return purgedCount;
   }
 
@@ -361,50 +361,85 @@ export class IntelCommandHandler implements IntelCommand {
       }
       
       if (pageIndex === 0) {
-        // First page uses reply()
-        messagePromises.push(
-          interaction.reply({
-            content: messageContent,
-            embeds: embeds,
-            flags: MessageFlags.Ephemeral
-          })
-        );
+        // First page uses reply() - we'll send this immediately and wait for it
+        const replyPromise = interaction.reply({
+          content: messageContent,
+          embeds: embeds,
+          flags: MessageFlags.Ephemeral
+        });
+        messagePromises.push(replyPromise);
       } else {
-        // Additional pages use followUp()
-        messagePromises.push(
-          interaction.followUp({
-            content: messageContent,
-            embeds: embeds,
-            flags: MessageFlags.Ephemeral
-          })
-        );
+        // Additional pages will be added to a separate array for sequential sending
+        messagePromises.push({
+          content: messageContent,
+          embeds: embeds,
+          flags: MessageFlags.Ephemeral
+        } as any); // Temporary placeholder - will be replaced with actual promises
       }
     }
     
-    // Wait for all messages to be sent and collect message objects
-    const sentMessages = await Promise.all(messagePromises);
+    // Send the initial reply first and wait for it to complete
+    const sentMessages: Array<Message | InteractionResponse> = [];
+    
+    // Send the first page (reply) and wait for completion
+    if (messagePromises.length > 0) {
+      const firstPageResponse = await messagePromises[0];
+      sentMessages.push(firstPageResponse);
+    }
+    
+    // Now send additional pages sequentially using followUp()
+    for (let pageIndex = 1; pageIndex < actualPages; pageIndex++) {
+      const startIndex = pageIndex * maxEmbeds;
+      const endIndex = Math.min(startIndex + maxEmbeds, sortedItems.length);
+      const pageItems = sortedItems.slice(startIndex, endIndex);
+      const embeds = pageItems.map(item => this.createIntelEmbed(item));
+      
+      // Enhanced messaging logic (same as before)
+      let messageContent: string;
+      const pageInfo = actualPages > 1 ? ` (Page ${pageIndex + 1}/${actualPages})` : '';
 
-    // Set timer to delete all ephemeral messages (skip in test environment)
+      if (hasMorePages && maxPagesReached) {
+        // Scenario: Hit page limit with items dropped
+        const variables: EnhancedListVariables = {
+          totalItems: sortedItems.length.toString(),
+          displayedItems: displayedItems.toString(),
+          droppedItems: droppedItems.toString(),
+          actualPages: actualPages.toString()
+        };
+        messageContent = getThemeMessageWithVariablesByContext(MessageCategory.SUCCESS, variables as unknown as Record<string, string>, 'list_summary').text;
+      } else {
+        // Scenario: Normal listing
+        const variables: BasicListVariables = {
+          totalItems: sortedItems.length.toString()
+        };
+        
+        // Only include pageInfo if we have multiple pages
+        if (pageInfo) {
+          variables.pageInfo = pageInfo;
+        }
+        
+        messageContent = getThemeMessageWithVariablesByContext(MessageCategory.SUCCESS, variables as unknown as Record<string, string>, 'list_summary').text;
+      }
+      
+      // Send followUp and wait for completion
+      const followUpResponse = await interaction.followUp({
+        content: messageContent,
+        embeds: embeds,
+        flags: MessageFlags.Ephemeral
+      });
+      sentMessages.push(followUpResponse);
+    }
+
+    // Set timer to delete the initial ephemeral reply (skip in test environment)
+    // Note: Follow-up ephemeral messages auto-expire and cannot be individually deleted
     if (timeoutMinutes && process.env.NODE_ENV !== 'test') {
       const timeoutMs = timeoutMinutes * 60 * 1000; // Convert minutes to milliseconds
       setTimeout(async () => {
-        // Delete each message individually with graceful error handling
-        for (let i = 0; i < sentMessages.length; i++) {
-          try {
-            const message = sentMessages[i];
-            if ('delete' in message) {
-              // This is a Message from followUp()
-              await message.delete();
-            } else {
-              // This is an InteractionResponse from reply() - use interaction.deleteReply()
-              if (i === 0) {
-                await interaction.deleteReply();
-              }
-            }
-          } catch (error) {
-            console.error(`[Intel] Error auto-deleting message ${i + 1}/${sentMessages.length} after ${timeoutMinutes} minutes:`, error);
-            // Continue to next message even if this one fails
-          }
+        try {
+          // Only delete the initial reply - follow-up messages auto-expire
+          await interaction.deleteReply();
+        } catch (error) {
+          console.error(`[Intel] Error auto-deleting initial reply after ${timeoutMinutes} minutes:`, error);
         }
       }, timeoutMs);
     }
@@ -416,8 +451,20 @@ export class IntelCommandHandler implements IntelCommand {
    * @param guildId - Guild ID
    */
   private async handleDelSubcommand(interaction: ChatInputCommandInteraction, guildId: string): Promise<void> {
-    const type = interaction.options.getString('type', true);
     const id = interaction.options.getString('id', true);
+
+    // Validate ID format using helper function
+    if (!isValidIntelId(id)) {
+      await this.sendErrorResponse(interaction, 'Invalid ID format. Expected format: <type>-<id>');
+      return;
+    }
+
+    // Extract type from ID using helper function
+    const type = getTypeFromIntelId(id);
+    if (!type) {
+      await this.sendErrorResponse(interaction, 'Could not extract type from ID');
+      return;
+    }
 
     // Handle supported types: rift, ore, fleet, and site
     if (this.registry.isSupportedType(type)) {
