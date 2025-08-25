@@ -225,7 +225,7 @@ export class IntelCommandHandler implements IntelCommand {
       const successMessage = handler.getSuccessMessage(content);
       
       await interaction.reply({ 
-        content: getThemeMessage(MessageCategory.SUCCESS, undefined, successMessage).text,
+        content: getThemeMessage(MessageCategory.SUCCESS, undefined, `${successMessage}\n\n💡 **Tip:** Try \`/intel add\` for a more user-friendly step-by-step process!`).text,
         embeds: [embed],
         flags: MessageFlags.Ephemeral
       });
