@@ -184,7 +184,7 @@ export const deleteIntelByIdFromInteraction = async (
     return;
   }
   
-  const successMessage = getThemeMessage(MessageCategory.SUCCESS, `Intel item deleted: ${id}`);
+  const successMessage = getThemeMessage(MessageCategory.SUCCESS, undefined, `Intel item deleted: ${id}`);
   await interaction.reply({
     content: successMessage.text,
     flags: MessageFlags.Ephemeral
